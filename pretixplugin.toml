@@ -1,0 +1,5 @@
+[plugin]
+package = "pretix-participantlist"
+modules = [ "pretix_participantlist" ]
+marketplace_name = "participantlist"
+

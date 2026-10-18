@@ -1,0 +1,107 @@
+[project]
+name = "pretix-participantlist"
+dynamic = ["version"]
+description = "Exports attendees as customizable participant lists (PDF and CSV)"
+readme = "README.rst"
+requires-python = ">=3.11"
+license = {text = "Apache"}
+keywords = ["pretix"]
+authors = [
+    {name = "ET15", email = "37038563+et15@users.noreply.github.com"},
+]
+maintainers = [
+    {name = "ET15", email = "37038563+et15@users.noreply.github.com"},
+]
+
+dependencies = [
+]
+
+[project.entry-points."pretix.plugin"]
+# pretix only reads the module part (before the ":") of this entry point: it
+# does `INSTALLED_APPS.append(entry_point.module)` in pretix/settings.py and
+# relies on Django's app-config auto-discovery (apps.py) to find
+# PretixPluginMeta. So this must be the plain top-level package name; pointing
+# it at ".apps" makes Django load a different, PretixPluginMeta-less app and
+# the plugin silently never shows up in the plugin list.
+pretix_participantlist = "pretix_participantlist:PretixPluginMeta"
+
+[project.entry-points."distutils.commands"]
+build = "pretix_plugin_build.build:CustomBuild"
+
+[build-system]
+requires = [
+    "setuptools",
+    "pretix-plugin-build",
+]
+
+[project.urls]
+homepage = "https://github.com/et15/pretix-participantlist"
+repository = "https://github.com/et15/pretix-participantlist"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.dynamic]
+version = {attr = "pretix_participantlist.__version__"}
+
+[tool.setuptools.packages.find]
+include = ["pretix*"]
+namespaces = false
+
+[dependency-groups]
+dev = ["ruff", "commitizen"]
+test = [
+    "pytest",
+    "pytest-django",
+    "coverage",
+    "pretix @ git+https://github.com/pretix/pretix.git@master",
+]
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+extend-exclude = ["*/migrations/*", "build", "dist"]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "UP",  # pyupgrade
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "SIM", # flake8-simplify
+    "DJ",  # flake8-django
+    "DTZ", # flake8-datetimez: naive datetimes (pretix is timezone-aware)
+    "RUF", # ruff-specific rules
+]
+ignore = [
+    "RUF001", # intentional non-ASCII characters in user-facing (German) strings
+    "RUF012", # mutable class attributes are idiomatic in Django/pretix (PretixPluginMeta, forms, Meta)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["DTZ"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["pretix_participantlist"]
+known-third-party = ["pretix"]
+
+[tool.ruff.format]
+docstring-code-format = true
+docstring-code-line-length = "dynamic"
+
+[tool.commitizen]
+name = "cz_conventional_commits"
+version = "0.1.0"
+version_scheme = "pep440"
+version_provider = "commitizen"
+tag_format = "v$version"
+annotated_tag = true
+# While the major version is 0, breaking changes bump the minor version, so a
+# `feat!:` cannot jump a young plugin to 1.0.0. Release 1.0.0 deliberately with
+# `cz bump --increment MAJOR` and remove this line.
+major_version_zero = true
+update_changelog_on_bump = true
+version_files = ["pretix_participantlist/__init__.py:__version__"]

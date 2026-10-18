@@ -1,0 +1,66 @@
+name: Code Style
+
+on:
+  push:
+    branches: [ main, master ]
+    paths-ignore:
+      - 'pretix_participantlist/locale/**'
+      - 'pretix_participantlist/static/**'
+  pull_request:
+    branches: [ main, master ]
+    paths-ignore:
+      - 'pretix_participantlist/locale/**'
+      - 'pretix_participantlist/static/**'
+
+jobs:
+  ruff:
+    name: ruff
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v1
+        with:
+          python-version: "3.11"
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/setup.py') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+      - name: Install pretix
+        run: pip3 install uv && uv pip install --system pretix
+      - name: Install Dependencies
+        run: uv pip install --system -U ruff -e .
+      - name: Run ruff format --check
+        run: ruff format --check .
+      - name: Run ruff check
+        run: ruff check .
+  packaging:
+    name: packaging
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v1
+        with:
+          python-version: "3.11"
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/setup.py') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+      - name: Install pretix
+        run: pip3 install uv && uv pip install --system pretix
+      - name: Install Dependencies
+        run: uv pip install --system -U twine check-manifest pretix-plugin-build setuptools build -e .
+      - name: Run check-manifest
+        run: check-manifest .
+        working-directory: .
+      - name: Build package
+        run: python setup.py sdist
+        working-directory: .
+      - name: Check package
+        run: twine check dist/*
+        working-directory: .
