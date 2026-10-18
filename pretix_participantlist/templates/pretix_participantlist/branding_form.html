@@ -1,0 +1,28 @@
+{% extends "pretixcontrol/organizers/base.html" %}
+{% load i18n %}
+{% load bootstrap3 %}
+{% block title %}{% trans "Branding" %}{% endblock %}
+{% block inner %}
+    <h1>{% trans "Branding" %}</h1>
+    <p>
+        {% blocktrans trimmed %}
+            This logo and header text are shown on every generated attendee list PDF, regardless of
+            which list kind is used.
+        {% endblocktrans %}
+    </p>
+    <form action="" method="post" enctype="multipart/form-data" class="form-horizontal">
+        {% csrf_token %}
+        {% bootstrap_form_errors form %}
+        {% bootstrap_field form.logo layout="control" %}
+        {% bootstrap_field form.header_text layout="control" %}
+        {% bootstrap_field form.filename_prefix layout="control" %}
+        {% bootstrap_field form.logo_width_mm layout="control" %}
+        {% bootstrap_field form.logo_height_mm layout="control" %}
+        {% bootstrap_field form.birth_date_question layout="control" %}
+        <div class="form-group submit-group">
+            <button type="submit" class="btn btn-primary btn-save">
+                {% trans "Save" %}
+            </button>
+        </div>
+    </form>
+{% endblock %}

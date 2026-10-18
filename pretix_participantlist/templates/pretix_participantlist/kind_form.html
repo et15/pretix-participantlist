@@ -1,0 +1,34 @@
+{% extends "pretixcontrol/organizers/base.html" %}
+{% load i18n %}
+{% load bootstrap3 %}
+{% block title %}
+    {% if object %}
+        {% blocktrans trimmed with name=object.name %}List kind: {{ name }}{% endblocktrans %}
+    {% else %}
+        {% trans "New list kind" %}
+    {% endif %}
+{% endblock %}
+{% block inner %}
+    {% if object %}
+        <h1>{% blocktrans trimmed with name=object.name %}List kind: {{ name }}{% endblocktrans %}</h1>
+    {% else %}
+        <h1>{% trans "New list kind" %}</h1>
+    {% endif %}
+    <form action="" method="post" class="form-horizontal">
+        {% csrf_token %}
+        {% bootstrap_form_errors form %}
+        {% bootstrap_field form.name layout="control" %}
+        {% bootstrap_field form.is_confidential layout="control" %}
+        {% bootstrap_field form.filename_suffix layout="control" %}
+        {% bootstrap_field form.columns_text layout="control" %}
+        {% bootstrap_field form.sort_text layout="control" %}
+        <div class="form-group submit-group">
+            <a href="{% url "plugins:pretix_participantlist:kinds" organizer=request.organizer.slug %}" class="btn btn-default btn-cancel">
+                {% trans "Cancel" %}
+            </a>
+            <button type="submit" class="btn btn-primary btn-save">
+                {% trans "Save" %}
+            </button>
+        </div>
+    </form>
+{% endblock %}

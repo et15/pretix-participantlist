@@ -5,6 +5,26 @@ This is a plugin for `pretix`_.
 
 Exports attendees as customizable participant lists (PDF and CSV)
 
+Features
+--------
+
+- **PDF participant list** for a single event (landscape A4), available in the
+  event's export page and as a shortcut in the event menu.
+- **List kinds**: named column selections that an organizer defines once and
+  that are then available in every event, each with an optional sort order,
+  download filename prefix/suffix and a "confidential" marker.
+- **Custom list**: per event, columns can also be typed in directly, one per
+  line. Join fields with ``+`` to stack them in one column and append ``=Title``
+  to set the column header, e.g. ``email+ticket=Contact``.
+- **Fields**: index, name, first/last name, age, email, order code, ticket type,
+  company, address, a signature column and any question with an identifier
+  (``question:<identifier>``). The age is computed from the organizer-wide
+  birth date question.
+- **Branding**: logo and header text of the PDF, configured per organizer.
+- **CSV/XLSX export** across multiple events.
+
+The plugin is activated for the organizer and then available in all its events.
+
 Development setup
 -----------------
 

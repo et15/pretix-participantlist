@@ -4,16 +4,18 @@ dynamic = ["version"]
 description = "Exports attendees as customizable participant lists (PDF and CSV)"
 readme = "README.rst"
 requires-python = ">=3.11"
-license = {text = "Apache"}
+license = "Apache-2.0"
 keywords = ["pretix"]
 authors = [
     {name = "ET15", email = "37038563+et15@users.noreply.github.com"},
+    {name = "JDAV Hessen"},
 ]
 maintainers = [
     {name = "ET15", email = "37038563+et15@users.noreply.github.com"},
 ]
 
 dependencies = [
+    "reportlab>=4.0.0",
 ]
 
 [project.entry-points."pretix.plugin"]
@@ -30,7 +32,7 @@ build = "pretix_plugin_build.build:CustomBuild"
 
 [build-system]
 requires = [
-    "setuptools",
+    "setuptools>=77",
     "pretix-plugin-build",
 ]
 
@@ -54,6 +56,7 @@ test = [
     "pytest",
     "pytest-django",
     "coverage",
+    "pypdf",
     "pretix @ git+https://github.com/pretix/pretix.git@master",
 ]
 

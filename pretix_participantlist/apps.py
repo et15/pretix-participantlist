@@ -18,7 +18,9 @@ class PluginApp(PluginConfig):
     class PretixPluginMeta:
         name = gettext_lazy("Participant List Export")
         author = "ET15"
-        description = gettext_lazy("Exports attendees as customizable participant lists (PDF and CSV)")
+        description = gettext_lazy(
+            "Exports attendees as customizable participant lists (PDF and CSV)"
+        )
         visible = True
         version = __version__
         category = "FORMAT"

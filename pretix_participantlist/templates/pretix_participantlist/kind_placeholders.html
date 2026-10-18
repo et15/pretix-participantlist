@@ -1,0 +1,48 @@
+{% extends "pretixcontrol/organizers/base.html" %}
+{% load i18n %}
+{% block title %}{% trans "Available placeholders" %}{% endblock %}
+{% block inner %}
+    <h1>{% trans "Available placeholders" %}</h1>
+    <h3>{% trans "Static fields" %}</h3>
+    <table class="table table-condensed">
+        <thead>
+        <tr>
+            <th>{% trans "Field" %}</th>
+            <th>{% trans "Description" %}</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for key, label in static_fields %}
+            <tr>
+                <td><code>{{ key }}</code></td>
+                <td>{{ label }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    <h3>{% trans "Question fields" %}</h3>
+    <table class="table table-condensed table-hover">
+        <thead>
+        <tr>
+            <th>{% trans "Placeholder" %}</th>
+            <th>{% trans "Question" %}</th>
+            <th>{% trans "Type" %}</th>
+            <th>{% trans "Events" %}</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for p in placeholders %}
+            <tr>
+                <td><code>question:{{ p.identifier }}</code></td>
+                <td>{{ p.question }}</td>
+                <td>{{ p.type_label }}</td>
+                <td>{{ p.events|join:", " }}</td>
+            </tr>
+        {% empty %}
+            <tr>
+                <td colspan="4">{% trans "None of your events have any questions with an identifier yet." %}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}

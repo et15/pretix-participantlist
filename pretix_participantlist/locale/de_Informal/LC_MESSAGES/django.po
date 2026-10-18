@@ -1,12 +1,385 @@
+#
 msgid ""
 msgstr ""
-"Project-Id-Version: \n"
-"Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2017-03-07 19:01+0100\n"
-"PO-Revision-Date: \n"
+"Project-Id-Version: pretix-participantlist\n"
 "Last-Translator: ET15\n"
-"Language-Team: \n"
-"Language: de\n"
+"Language: de_Informal\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: pretix_participantlist/apps.py
+msgid "Participant List Export"
+msgstr "Teilnehmendenlisten-Export"
+
+#: pretix_participantlist/apps.py
+msgid "Exports attendees as customizable participant lists (PDF and CSV)"
+msgstr ""
+"Exportiert Teilnehmende als anpassbare Teilnehmendenlisten (PDF und CSV)"
+
+#: pretix_participantlist/exporters.py
+msgid "Participant list (PDF)"
+msgstr "Teilnehmendenliste (PDF)"
+
+#: pretix_participantlist/exporters.py
+msgctxt "export_category"
+msgid "Participant list"
+msgstr "Teilnehmendenliste"
+
+#: pretix_participantlist/exporters.py
+msgid ""
+"Download a PDF attendee list using one of the list kinds configured in the "
+"organizer settings."
+msgstr ""
+"Lade eine Teilnehmendenliste als PDF herunter – mit einer der Listenarten, "
+"die in den Veranstalter-Einstellungen angelegt wurden."
+
+#: pretix_participantlist/exporters.py
+msgid "(All kinds)"
+msgstr "(Alle Listenarten)"
+
+#: pretix_participantlist/exporters.py
+msgid "Custom list"
+msgstr "Eigene Liste"
+
+#: pretix_participantlist/exporters.py pretix_participantlist/models.py
+msgid "List kind"
+msgstr "Listenart"
+
+#: pretix_participantlist/exporters.py
+msgid "Custom list: title"
+msgstr "Eigene Liste: Titel"
+
+#: pretix_participantlist/exporters.py
+msgid ""
+"Only used for the kind \"Custom list\", saved with this event. Shown in the "
+"header of the PDF. Defaults to \"Custom list\" if left empty."
+msgstr ""
+"Wird nur für die Listenart „Eigene Liste“ verwendet und bei dieser "
+"Veranstaltung gespeichert. Erscheint in der Kopfzeile des PDFs. Ohne Angabe "
+"wird „Eigene Liste“ verwendet."
+
+#: pretix_participantlist/exporters.py
+msgid "Custom list: columns"
+msgstr "Eigene Liste: Spalten"
+
+#: pretix_participantlist/exporters.py
+#, python-format
+msgid ""
+"Only used for the kind \"Custom list\", saved with this event. One column "
+"per line, in the order they should appear in the PDF. Combine two or more "
+"fields into a single stacked column by joining them with \"+\", e.g. "
+"\"email+ticket\". Append \"=Title\" to set the column header, e.g. "
+"\"email+ticket=Contact\"; without it the header is made up of the fields' "
+"own names; use \\n in the title for a line break. Static fields: %s. "
+"Questions: \"question:<identifier>\"."
+msgstr ""
+"Wird nur für die Listenart „Eigene Liste“ verwendet und bei dieser "
+"Veranstaltung gespeichert. Eine Spalte pro Zeile, in der Reihenfolge, in der"
+" sie im PDF erscheinen sollen. Mehrere Felder lassen sich mit „+“ zu einer "
+"gestapelten Spalte verbinden, z. B. „email+ticket“. Mit „=Titel“ am "
+"Zeilenende legst du die Spaltenüberschrift fest, z. B. "
+"„email+ticket=Kontakt“; ohne Titel besteht die Überschrift aus den Namen der"
+" Felder. Mit \\n im Titel erzeugst du einen Zeilenumbruch. Vordefinierte "
+"Felder: %s. Fragen: „question:<Referenz>“."
+
+#: pretix_participantlist/exporters.py
+msgid "Custom list: sort by"
+msgstr "Eigene Liste: Sortieren nach"
+
+#: pretix_participantlist/exporters.py
+#, python-format
+msgid ""
+"Only used for the kind \"Custom list\", saved with this event. One field per"
+" line, in priority order. Prefix a field with \"-\" for descending order, "
+"e.g. \"-name\". Static fields: %s."
+msgstr ""
+"Wird nur für die Listenart „Eigene Liste“ verwendet und bei dieser "
+"Veranstaltung gespeichert. Ein Feld pro Zeile, in Reihenfolge der Priorität."
+" Ein vorangestelltes „-“ sortiert absteigend, z. B. „-name“. Vordefinierte "
+"Felder: %s."
+
+#: pretix_participantlist/exporters.py
+msgid "confidential"
+msgstr "vertraulich"
+
+#: pretix_participantlist/exporters.py
+msgid "do not distribute"
+msgstr "nicht weitergeben"
+
+#: pretix_participantlist/exporters.py
+msgid "Participant list (CSV, multiple events)"
+msgstr "Teilnehmendenliste (CSV, mehrere Veranstaltungen)"
+
+#: pretix_participantlist/exporters.py
+msgid "Download attendees across multiple events as a single CSV/XLSX file."
+msgstr ""
+"Lade die Teilnehmenden mehrerer Veranstaltungen als eine CSV-/XLSX-Datei "
+"herunter."
+
+#: pretix_participantlist/exporters.py
+msgid "Fields"
+msgstr "Felder"
+
+#: pretix_participantlist/fields.py
+msgid "Index"
+msgstr "Nr."
+
+#: pretix_participantlist/fields.py
+msgid "Last name"
+msgstr "Nachname"
+
+#: pretix_participantlist/fields.py
+msgid "Age"
+msgstr "Alter"
+
+#: pretix_participantlist/fields.py
+msgid "Ticket type"
+msgstr "Ticketart"
+
+#: pretix_participantlist/fields.py
+msgctxt "static_field"
+msgid "Signature"
+msgstr "Unterschrift"
+
+#: pretix_participantlist/fields.py
+#, python-format
+msgid "Unknown field \"%s\"."
+msgstr "Unbekanntes Feld „%s“."
+
+#: pretix_participantlist/fields.py
+#, python-format
+msgid "Field \"%s\" is used more than once."
+msgstr "Das Feld „%s“ wird mehrfach verwendet."
+
+#: pretix_participantlist/fields.py
+msgid "“Signature” can't be combined with another field."
+msgstr "„Unterschrift“ kann nicht mit einem anderen Feld kombiniert werden."
+
+#: pretix_participantlist/forms.py
+msgid "Shown in the header of every generated PDF list."
+msgstr "Wird in der Kopfzeile jeder erzeugten PDF-Liste angezeigt."
+
+#: pretix_participantlist/forms.py
+msgid "Columns"
+msgstr "Spalten"
+
+#: pretix_participantlist/forms.py
+msgid ""
+"One column per line, in the order they should appear in the PDF. Combine two"
+" or more fields into a single stacked column by joining them with \"+\", "
+"e.g. \"email+ticket\". Append \"=Title\" to set the column header, e.g. "
+"\"email+ticket=Contact\"; without it the header is made up of the fields' "
+"own names; use \\n in the title for a line break."
+msgstr ""
+"Eine Spalte pro Zeile, in der Reihenfolge, in der sie im PDF erscheinen "
+"sollen. Mehrere Felder lassen sich mit „+“ zu einer gestapelten Spalte "
+"verbinden, z. B. „email+ticket“. Mit „=Titel“ am Zeilenende legst du die "
+"Spaltenüberschrift fest, z. B. „email+ticket=Kontakt“; ohne Titel besteht "
+"die Überschrift aus den Namen der Felder. Mit \\n im Titel erzeugst du einen"
+" Zeilenumbruch."
+
+#: pretix_participantlist/forms.py
+msgid ""
+"One field per line, in priority order (the first line is the primary sort "
+"key, further lines break ties). Prefix a field with \"-\" for descending "
+"order, e.g. \"-name\". Leave empty to keep attendees in the order they were "
+"registered."
+msgstr ""
+"Ein Feld pro Zeile in der Reihenfolge der Priorität (die erste Zeile ist der"
+" Hauptschlüssel, weitere Zeilen entscheiden bei Gleichstand). Mit "
+"vorangestelltem „-“ wird absteigend sortiert, z. B. „-name“. Leer lassen, um"
+" die Teilnehmenden in der Reihenfolge der Anmeldung zu belassen."
+
+#: pretix_participantlist/forms.py
+#, python-format
+msgid "Static fields: %s."
+msgstr "Vordefinierte Felder: %s."
+
+#: pretix_participantlist/forms.py pretix_participantlist/models.py
+msgid "Logo"
+msgstr "Logo"
+
+#: pretix_participantlist/models.py
+msgid "PDF header text"
+msgstr "Kopfzeilentext im PDF"
+
+#: pretix_participantlist/models.py
+msgid "Download filename prefix"
+msgstr "Präfix des Download-Dateinamens"
+
+#: pretix_participantlist/models.py
+msgid ""
+"Used as the first part of the filename of generated PDF lists. Defaults to "
+"\"Participant-List\" if left empty."
+msgstr ""
+"Erster Teil des Dateinamens erzeugter PDF-Listen. Ist das Feld leer, wird "
+"„Participant-List“ verwendet."
+
+#: pretix_participantlist/models.py
+msgid "Logo max width (mm)"
+msgstr "Maximale Logobreite (mm)"
+
+#: pretix_participantlist/models.py
+msgid ""
+"Maximum width of the logo in the PDF header. The logo is scaled down to fit "
+"within this box while keeping its aspect ratio."
+msgstr ""
+"Maximale Breite des Logos in der PDF-Kopfzeile. Das Logo wird bei Bedarf "
+"unter Beibehaltung des Seitenverhältnisses verkleinert, bis es in diesen "
+"Rahmen passt."
+
+#: pretix_participantlist/models.py
+msgid "Logo max height (mm)"
+msgstr "Maximale Logohöhe (mm)"
+
+#: pretix_participantlist/models.py
+msgid "Maximum height of the logo in the PDF header."
+msgstr "Maximale Höhe des Logos in der PDF-Kopfzeile."
+
+#: pretix_participantlist/models.py
+msgid "Birth date question"
+msgstr "Geburtsdatum-Frage"
+
+#: pretix_participantlist/models.py
+msgid ""
+"Internal reference (identifier) of the birth date question. For the age "
+"calculation (column \"age\"), it must be set to this value in every event of"
+" this organizer. If unset, the age column stays empty."
+msgstr ""
+"Interne Referenz (Identifikator) der Geburtsdatum-Frage. Für die "
+"Altersberechnung (Spalte „age“) muss die Frage in jeder Veranstaltung dieses"
+" Veranstalters diese Referenz haben. Wenn nicht gesetzt, bleibt die "
+"Altersspalte leer."
+
+#: pretix_participantlist/models.py
+msgid "Default selected fields"
+msgstr "Standardmäßig ausgewählte Felder"
+
+#: pretix_participantlist/models.py
+#: pretix_participantlist/templates/pretix_participantlist/kind_list.html
+msgid "Default kind"
+msgstr "Standard-Listenart"
+
+#: pretix_participantlist/models.py
+msgid "Confidential"
+msgstr "Vertraulich"
+
+#: pretix_participantlist/models.py
+msgid ""
+"Adds a “Confidential — do not distribute” notice to the footer of generated "
+"PDF lists of this kind."
+msgstr ""
+"Fügt der Fußzeile erzeugter PDF-Listen dieser Art den Hinweis „Vertraulich –"
+" nicht weitergeben“ hinzu."
+
+#: pretix_participantlist/models.py
+msgid "Download filename suffix"
+msgstr "Suffix des Download-Dateinamens"
+
+#: pretix_participantlist/models.py
+msgid ""
+"Appended to the filename of generated PDF lists of this kind. Leave empty to"
+" omit it."
+msgstr ""
+"Wird an den Dateinamen erzeugter PDF-Listen dieser Art angehängt. Leer "
+"lassen, um kein Suffix zu verwenden."
+
+#: pretix_participantlist/signals.py
+msgid "Participant list"
+msgstr "Teilnehmendenliste"
+
+#: pretix_participantlist/models.py pretix_participantlist/signals.py
+#: pretix_participantlist/templates/pretix_participantlist/kind_list.html
+msgid "List kinds"
+msgstr "Listenarten"
+
+#: pretix_participantlist/models.py pretix_participantlist/signals.py
+#: pretix_participantlist/templates/pretix_participantlist/branding_form.html
+msgid "Branding"
+msgstr "Branding"
+
+#: pretix_participantlist/templates/pretix_participantlist/branding_form.html
+msgid ""
+"This logo and header text are shown on every generated attendee list PDF, "
+"regardless of which list kind is used."
+msgstr ""
+"Dieses Logo und der Kopfzeilentext erscheinen auf jeder erzeugten "
+"Teilnehmendenliste, unabhängig von der verwendeten Listenart."
+
+#: pretix_participantlist/templates/pretix_participantlist/kind_delete.html
+msgid "Delete list kind"
+msgstr "Listenart löschen"
+
+#: pretix_participantlist/templates/pretix_participantlist/kind_delete.html
+#, python-format
+msgid ""
+"Are you sure you want to delete the list kind <strong>%(name)s</strong>?"
+msgstr "Möchtest du die Listenart <strong>%(name)s</strong> wirklich löschen?"
+
+#: pretix_participantlist/templates/pretix_participantlist/kind_form.html
+#, python-format
+msgid "List kind: %(name)s"
+msgstr "Listenart: %(name)s"
+
+#: pretix_participantlist/templates/pretix_participantlist/kind_form.html
+msgid "New list kind"
+msgstr "Neue Listenart"
+
+#: pretix_participantlist/templates/pretix_participantlist/kind_list.html
+msgid ""
+"Each kind is a named field selection an operator can pick when exporting the"
+" participant list PDF for an event."
+msgstr ""
+"Jede Listenart ist eine benannte Auswahl von Feldern, die beim Export der "
+"Teilnehmendenliste (PDF) für eine Veranstaltung gewählt werden kann."
+
+#: pretix_participantlist/templates/pretix_participantlist/kind_list.html
+msgid "Create a new list kind"
+msgstr "Neue Listenart anlegen"
+
+#: pretix_participantlist/templates/pretix_participantlist/kind_list.html
+msgid "You haven't created any list kinds yet."
+msgstr "Du hast noch keine Listenarten angelegt."
+
+#: pretix_participantlist/templates/pretix_participantlist/kind_placeholders.html
+msgid "Static fields"
+msgstr "Vordefinierte Felder"
+
+#: pretix_participantlist/templates/pretix_participantlist/kind_placeholders.html
+msgid "Field"
+msgstr "Feld"
+
+#: pretix_participantlist/templates/pretix_participantlist/kind_placeholders.html
+msgid "Question fields"
+msgstr "Fragefelder"
+
+#: pretix_participantlist/templates/pretix_participantlist/kind_placeholders.html
+msgid "None of your events have any questions with an identifier yet."
+msgstr ""
+"Keine deiner Veranstaltungen hat bisher Fragen mit einer internen Referenz."
+
+#: pretix_participantlist/views.py
+msgid "The list kind has been created."
+msgstr "Die Listenart wurde angelegt."
+
+#: pretix_participantlist/views.py
+msgid "The list kind has been updated."
+msgstr "Die Listenart wurde aktualisiert."
+
+#: pretix_participantlist/views.py
+msgid "The list kind has been deleted."
+msgstr "Die Listenart wurde gelöscht."
+
+#: pretix_participantlist/views.py
+msgid "The default list kind has been changed."
+msgstr "Die Standard-Listenart wurde geändert."
+
+#: pretix_participantlist/exporters.py
+msgid "Checked in"
+msgstr "Eingecheckt"
+
+#: pretix_participantlist/exporters.py
+msgid "Last check-in"
+msgstr "Letzter Check-in"
