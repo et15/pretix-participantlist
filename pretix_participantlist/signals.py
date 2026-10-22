@@ -1,11 +1,13 @@
 from django.dispatch import receiver
+from django.templatetags.static import static
 from django.urls import reverse
+from django.utils.html import format_html
 from django.utils.translation import gettext_lazy as _
 from pretix.base.signals import (
     register_data_exporters,
     register_multievent_data_exporters,
 )
-from pretix.control.signals import nav_event, nav_organizer
+from pretix.control.signals import html_head, nav_event, nav_organizer
 
 
 @receiver(register_data_exporters, dispatch_uid="participantlist_export_pdf")
@@ -96,3 +98,15 @@ def nav_event_receiver(sender, request, **kwargs):
             "active": active,
         },
     ]
+
+
+@receiver(html_head, dispatch_uid="participantlist_html_head")
+def html_head_receiver(sender, request, **kwargs):
+    """Load the export page script that copies a list kind into the custom list."""
+    url = request.resolver_match
+    if not (url and url.url_name == "event.orders.export"):
+        return ""
+    return format_html(
+        '<script src="{}" defer></script>',
+        static("pretix_participantlist/export.js"),
+    )

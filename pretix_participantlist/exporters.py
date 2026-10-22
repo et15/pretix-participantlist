@@ -8,6 +8,7 @@ from xml.sax.saxutils import escape
 from django import forms
 from django.db.models import Prefetch
 from django.utils.functional import cached_property
+from django.utils.html import format_html, format_html_join
 from django.utils.text import slugify
 from django.utils.timezone import now
 from django.utils.translation import gettext_lazy as _
@@ -36,6 +37,8 @@ from .fields import (
     address_lines,
     birth_date_question_identifier,
     extract_static_field,
+    format_column_spec,
+    format_sort_spec,
     parse_column_spec,
     parse_default_fields,
     parse_sort_spec,
@@ -149,6 +152,44 @@ class AttendeeListPDFExporter(ReportlabExportMixin, BaseExporter):
 
         return validate
 
+    @staticmethod
+    def _adopt_kind_help(kinds):
+        """Button (wired up by export.js) that copies a kind into the custom list.
+
+        The kinds' definitions travel as data attributes, so the script needs
+        no extra request.
+        """
+        if not kinds:
+            return ""
+        definitions = format_html_join(
+            "",
+            '<span class="participantlist-kind" hidden data-kind="{}" data-name="{}" '
+            'data-columns="{}" data-sort="{}" data-include-pending="{}"></span>',
+            (
+                (
+                    kind.pk,
+                    kind.name,
+                    format_column_spec(parse_default_fields(kind.default_fields)),
+                    format_sort_spec(kind.sort_fields),
+                    "1" if kind.include_pending else "",
+                )
+                for kind in kinds
+            ),
+        )
+        return format_html(
+            '{}<button type="button" class="btn btn-default btn-sm '
+            'participantlist-adopt" data-hint="{}">'
+            '<span class="fa fa-copy"></span> {}</button> '
+            '<span class="participantlist-adopt-message text-danger"></span><br>{}',
+            definitions,
+            _("Please select a list kind first."),
+            _("Copy selected kind to custom list"),
+            _(
+                'Fills the "Custom list" fields below from the selected list '
+                "kind, so you can adjust it for this event."
+            ),
+        )
+
     @property
     def export_form_fields(self):
         kinds = list(ListConfiguration.objects.filter(organizer=self.event.organizer))
@@ -176,6 +217,7 @@ class AttendeeListPDFExporter(ReportlabExportMixin, BaseExporter):
                         widget=forms.RadioSelect
                         if len(kind_choices) <= 5
                         else forms.Select,
+                        help_text=self._adopt_kind_help(kinds),
                     ),
                 ),
                 (

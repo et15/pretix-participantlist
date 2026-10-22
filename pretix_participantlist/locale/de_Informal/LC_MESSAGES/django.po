@@ -420,3 +420,19 @@ msgstr ""
 "Listet in erzeugten Listen dieser Art auch Teilnehmende auf, deren "
 "Bestellung noch offen ist (noch nicht bezahlt oder auf Genehmigung "
 "wartend). Sonst werden nur bezahlte Bestellungen aufgelistet."
+
+#: pretix_participantlist/exporters.py
+msgid "Please select a list kind first."
+msgstr "Bitte wähle zuerst eine Listenart aus."
+
+#: pretix_participantlist/exporters.py
+msgid "Copy selected kind to custom list"
+msgstr "Gewählte Art in eigene Liste übernehmen"
+
+#: pretix_participantlist/exporters.py
+msgid ""
+"Fills the \"Custom list\" fields below from the selected list kind, so you can "
+"adjust it for this event."
+msgstr ""
+"Füllt die Felder der „Eigenen Liste“ unten mit den Einstellungen der "
+"gewählten Listenart, damit du sie für diese Veranstaltung anpassen kannst."

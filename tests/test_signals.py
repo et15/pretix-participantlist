@@ -2,7 +2,8 @@ import pytest
 from django.test import RequestFactory
 from django.urls import resolve, reverse
 
-from pretix_participantlist.signals import nav_event_receiver
+from pretix_participantlist import signals
+from pretix_participantlist.signals import html_head_receiver, nav_event_receiver
 
 pytestmark = pytest.mark.django_db
 
@@ -36,3 +37,25 @@ def test_event_nav_is_active_on_the_exporter_form(event):
 
 def test_event_nav_is_hidden_without_order_permission(event):
     assert nav_event_receiver(event, request=_request(event, permissions=())) == []
+
+
+def test_export_page_loads_the_export_script(event, monkeypatch):
+    monkeypatch.setattr(signals, "static", lambda path: f"/static/{path}")
+
+    html = html_head_receiver(event, request=_request(event))
+
+    assert (
+        html == '<script src="/static/pretix_participantlist/export.js" defer></script>'
+    )
+
+
+def test_other_pages_do_not_load_the_export_script(event):
+    request = _request(event)
+    request.resolver_match = resolve(
+        reverse(
+            "control:event.index",
+            kwargs={"organizer": event.organizer.slug, "event": event.slug},
+        )
+    )
+
+    assert html_head_receiver(event, request=request) == ""

@@ -955,3 +955,28 @@ def test_csv_exporter_status_field(event, item, position):
 
     assert rows[0] == ["Name", "Order status"]
     assert rows[1:] == [["Jane Doe", "paid"], ["Pending Pia", "pending"]]
+
+
+def test_export_form_offers_to_copy_a_kind_into_the_custom_list(event):
+    ListConfiguration.objects.create(
+        organizer=event.organizer,
+        name='Kurz "A"',
+        default_fields=["name", ["email", "ticket"]],
+        sort_fields=["-name"],
+        include_pending=True,
+    )
+    exporter = AttendeeListPDFExporter(event=event, organizer=event.organizer)
+
+    help_text = str(exporter.export_form_fields["list"].help_text)
+
+    assert "participantlist-adopt" in help_text
+    assert 'data-name="Kurz &quot;A&quot;"' in help_text
+    assert 'data-columns="name\nemail+ticket"' in help_text
+    assert 'data-sort="-name"' in help_text
+    assert 'data-include-pending="1"' in help_text
+
+
+def test_export_form_has_no_copy_button_without_kinds(event):
+    exporter = AttendeeListPDFExporter(event=event, organizer=event.organizer)
+
+    assert not exporter.export_form_fields["list"].help_text
