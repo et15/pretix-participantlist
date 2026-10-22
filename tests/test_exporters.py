@@ -16,6 +16,7 @@ from reportlab.lib.units import mm
 from pretix_participantlist.exporters import (
     ALL_KINDS_VALUE,
     CUSTOM_COLUMNS_SETTING,
+    CUSTOM_INCLUDE_PENDING_SETTING,
     CUSTOM_KIND_VALUE,
     CUSTOM_NAME_SETTING,
     CUSTOM_SORT_SETTING,
@@ -141,7 +142,13 @@ def test_export_form_has_custom_list_choice_and_no_checkbox_fields(event):
     exporter = AttendeeListPDFExporter(event=event, organizer=event.organizer)
     form_fields = exporter.export_form_fields
 
-    assert list(form_fields) == ["list", "custom_name", "custom_columns", "custom_sort"]
+    assert list(form_fields) == [
+        "list",
+        "custom_name",
+        "custom_columns",
+        "custom_sort",
+        "custom_include_pending",
+    ]
     assert CUSTOM_KIND_VALUE in dict(form_fields["list"].choices)
 
 
@@ -805,3 +812,113 @@ def test_group_header_title_supports_literal_line_break(event):
     exporter = AttendeeListPDFExporter(event=event, organizer=event.organizer)
     group = ColumnGroup([("static", "email")], label="Kontakt\\n<Eltern>")
     assert exporter._group_header(group) == "Kontakt<br/>&lt;Eltern&gt;"
+
+
+def _make_pending_position(event, item, code, name):
+    position = _make_position(event, item, code, name)
+    position.order.status = Order.STATUS_PENDING
+    position.order.save(update_fields=["status"])
+    return position
+
+
+def test_pdf_exporter_leaves_out_pending_payments_by_default(event, item, position):
+    _make_pending_position(event, item, "PEND1", "Pending Pia")
+    kind = ListConfiguration.objects.create(
+        organizer=event.organizer,
+        name="Kurz",
+        default_fields=["name"],
+        is_default=True,
+    )
+
+    exporter = AttendeeListPDFExporter(event=event, organizer=event.organizer)
+    _filename, _content_type, data = exporter.render({"list": str(kind.pk)})
+
+    text = _pdf_text(data)
+    assert "Jane Doe" in text
+    assert "Pending Pia" not in text
+
+
+def test_pdf_exporter_kind_can_include_pending_payments(event, item, position):
+    _make_pending_position(event, item, "PEND1", "Pending Pia")
+    kind = ListConfiguration.objects.create(
+        organizer=event.organizer,
+        name="Kurz",
+        default_fields=["name"],
+        is_default=True,
+        include_pending=True,
+    )
+
+    exporter = AttendeeListPDFExporter(event=event, organizer=event.organizer)
+    _filename, _content_type, data = exporter.render({"list": str(kind.pk)})
+
+    text = _pdf_text(data)
+    assert "Jane Doe" in text
+    assert "Pending Pia" in text
+
+
+def test_pdf_exporter_archive_applies_each_kinds_pending_setting(event, item, position):
+    _make_pending_position(event, item, "PEND1", "Pending Pia")
+    ListConfiguration.objects.create(
+        organizer=event.organizer,
+        name="Paid only",
+        default_fields=["name"],
+        is_default=True,
+    )
+    ListConfiguration.objects.create(
+        organizer=event.organizer,
+        name="Everyone",
+        default_fields=["name"],
+        include_pending=True,
+    )
+
+    exporter = AttendeeListPDFExporter(event=event, organizer=event.organizer)
+    _filename, _content_type, data = exporter.render({"list": ALL_KINDS_VALUE})
+    today = now().astimezone(event.timezone).strftime("%Y-%m-%d")
+
+    with zipfile.ZipFile(BytesIO(data)) as zf:
+        paid_only = _pdf_text(
+            zf.read(f"Participant-List_{event.slug}_{today}_paid-only.pdf")
+        )
+        everyone = _pdf_text(
+            zf.read(f"Participant-List_{event.slug}_{today}_everyone.pdf")
+        )
+
+    assert "Pending Pia" not in paid_only
+    assert "Pending Pia" in everyone
+
+
+def test_custom_list_can_include_pending_payments_and_remembers_choice(
+    event, item, position
+):
+    _make_pending_position(event, item, "PEND1", "Pending Pia")
+    custom = {"list": CUSTOM_KIND_VALUE, "custom_columns": "name", "custom_sort": ""}
+
+    exporter = AttendeeListPDFExporter(event=event, organizer=event.organizer)
+    _filename, _content_type, data = exporter.render(custom)
+    assert "Pending Pia" not in _pdf_text(data)
+
+    _filename, _content_type, data = exporter.render(
+        {**custom, "custom_include_pending": True}
+    )
+    text = _pdf_text(data)
+    assert "Jane Doe" in text
+    assert "Pending Pia" in text
+
+    event.settings.flush()
+    assert event.settings.get(CUSTOM_INCLUDE_PENDING_SETTING, as_type=bool) is True
+    fields = AttendeeListPDFExporter(
+        event=event, organizer=event.organizer
+    ).export_form_fields
+    assert fields["custom_include_pending"].initial is True
+
+
+def test_csv_exporter_can_include_pending_payments(event, item, position):
+    _make_pending_position(event, item, "PEND1", "Pending Pia")
+
+    paid_only = list(_csv_exporter(event).iterate_list({"fields": ["name"]}))
+    everyone = list(
+        _csv_exporter(event).iterate_list({"fields": ["name"], "include_pending": True})
+    )
+
+    assert paid_only[1:] == [["Jane Doe"]]
+    assert everyone[1:] == [["Jane Doe"], ["Pending Pia"]]

@@ -50,6 +50,7 @@ CUSTOM_KIND_VALUE = "__custom__"
 CUSTOM_NAME_SETTING = "participantlist_custom_name"
 CUSTOM_COLUMNS_SETTING = "participantlist_custom_columns"
 CUSTOM_SORT_SETTING = "participantlist_custom_sort"
+CUSTOM_INCLUDE_PENDING_SETTING = "participantlist_custom_include_pending"
 STATIC_FIELD_LABELS = dict(STATIC_FIELD_CHOICES)
 DEFAULT_FILENAME_PREFIX = "Participant-List"
 FILENAME_UNSAFE_RE = re.compile(r'[\\/:*?"<>|]')
@@ -100,11 +101,18 @@ class SigningSpaceFlowable(Flowable):
         pass
 
 
-def _position_queryset(event):
+def _listed_order_statuses(include_pending=False):
+    """Order statuses whose participants appear in a list."""
+    if include_pending:
+        return (Order.STATUS_PAID, Order.STATUS_PENDING)
+    return (Order.STATUS_PAID,)
+
+
+def _position_queryset(event, include_pending=False):
     return (
         OrderPosition.objects.filter(
             order__event=event,
-            order__status__in=(Order.STATUS_PAID, Order.STATUS_PENDING),
+            order__status__in=_listed_order_statuses(include_pending),
         )
         .select_related("order", "item", "variation", "order__invoice_address")
         .prefetch_related("answers", "answers__question")
@@ -222,6 +230,21 @@ class AttendeeListPDFExporter(ReportlabExportMixin, BaseExporter):
                         % ", ".join(sortable_tokens),
                     ),
                 ),
+                (
+                    "custom_include_pending",
+                    forms.BooleanField(
+                        label=_("Custom list: include pending payments"),
+                        required=False,
+                        initial=self.event.settings.get(
+                            CUSTOM_INCLUDE_PENDING_SETTING, as_type=bool, default=False
+                        ),
+                        help_text=_(
+                            'Only used for the kind "Custom list", saved with '
+                            "this event. Also list participants whose order is "
+                            "still pending (not yet paid, or awaiting approval)."
+                        ),
+                    ),
+                ),
             ]
         )
 
@@ -251,6 +274,7 @@ class AttendeeListPDFExporter(ReportlabExportMixin, BaseExporter):
             name=(form_data.get("custom_name") or "").strip() or str(_("Custom list")),
             default_fields=serialize_column_groups(columns),
             sort_fields=sort_fields,
+            include_pending=bool(form_data.get("custom_include_pending")),
         )
 
     def _save_custom_definition(self, form_data):
@@ -262,6 +286,14 @@ class AttendeeListPDFExporter(ReportlabExportMixin, BaseExporter):
             value = form_data.get(key) or ""
             if (self.event.settings.get(setting) or "") != value:
                 self.event.settings.set(setting, value)
+        include_pending = bool(form_data.get("custom_include_pending"))
+        if (
+            self.event.settings.get(
+                CUSTOM_INCLUDE_PENDING_SETTING, as_type=bool, default=False
+            )
+            != include_pending
+        ):
+            self.event.settings.set(CUSTOM_INCLUDE_PENDING_SETTING, include_pending)
 
     def _resolve_kind(self, form_data, organizer):
         kind_value = form_data.get("list") or ALL_KINDS_VALUE
@@ -391,7 +423,11 @@ class AttendeeListPDFExporter(ReportlabExportMixin, BaseExporter):
         ]
 
     def _sorted_positions(self, kind):
-        positions = list(_position_queryset(self.event))
+        positions = list(
+            _position_queryset(
+                self.event, include_pending=bool(kind and kind.include_pending)
+            )
+        )
         if not kind or not kind.sort_fields:
             return positions
         sort_fields = resolve_field_tokens(kind.sort_fields, self.event)
@@ -701,6 +737,18 @@ class AttendeeListCSVExporter(ListExporter):
                         required=False,
                     ),
                 ),
+                (
+                    "include_pending",
+                    forms.BooleanField(
+                        label=_("Include pending payments"),
+                        required=False,
+                        initial=False,
+                        help_text=_(
+                            "Also list participants whose order is still pending "
+                            "(not yet paid, or awaiting approval)."
+                        ),
+                    ),
+                ),
             ]
         )
 
@@ -743,7 +791,9 @@ class AttendeeListCSVExporter(ListExporter):
         qs = (
             OrderPosition.objects.filter(
                 order__event__in=self.events,
-                order__status__in=(Order.STATUS_PAID, Order.STATUS_PENDING),
+                order__status__in=_listed_order_statuses(
+                    bool(form_data.get("include_pending"))
+                ),
             )
             .select_related(
                 "order", "item", "variation", "order__invoice_address", "order__event"

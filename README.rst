@@ -12,7 +12,9 @@ Features
   event's export page and as a shortcut in the event menu.
 - **List kinds**: named column selections that an organizer defines once and
   that are then available in every event, each with an optional sort order,
-  download filename prefix/suffix and a "confidential" marker.
+  download filename prefix/suffix, a "confidential" marker and an option to
+  also list participants whose order is still pending (unpaid); by default only
+  paid orders are listed.
 - **Custom list**: per event, columns can also be typed in directly, one per
   line. Join fields with ``+`` to stack them in one column and append ``=Title``
   to set the column header, e.g. ``email+ticket=Contact``.

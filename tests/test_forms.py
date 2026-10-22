@@ -197,3 +197,23 @@ def test_editing_kind_prefills_columns_text_with_titles(organizer):
     )
     form = ListConfigurationForm(instance=kind, organizer=organizer)
     assert form.initial["columns_text"] == "email+ticket=Kontakt\nname"
+
+
+def test_kind_form_saves_include_pending(organizer):
+    form = ListConfigurationForm(
+        data={"name": "Kurz", "columns_text": "name", "include_pending": "on"},
+        organizer=organizer,
+    )
+    assert form.is_valid(), form.errors
+    kind = form.save(commit=False)
+    kind.organizer = organizer
+    kind.save()
+    assert kind.include_pending is True
+
+
+def test_kind_form_include_pending_is_off_when_unchecked(organizer):
+    form = ListConfigurationForm(
+        data={"name": "Kurz", "columns_text": "name"}, organizer=organizer
+    )
+    assert form.is_valid(), form.errors
+    assert form.save(commit=False).include_pending is False

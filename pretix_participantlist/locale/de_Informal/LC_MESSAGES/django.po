@@ -383,3 +383,40 @@ msgstr "Eingecheckt"
 #: pretix_participantlist/exporters.py
 msgid "Last check-in"
 msgstr "Letzter Check-in"
+
+#: pretix_participantlist/exporters.py
+msgid "Custom list: include pending payments"
+msgstr "Eigene Liste: Offene Zahlungen einbeziehen"
+
+#: pretix_participantlist/exporters.py
+msgid ""
+"Only used for the kind \"Custom list\", saved with this event. Also list "
+"participants whose order is still pending (not yet paid, or awaiting "
+"approval)."
+msgstr ""
+"Wird nur für die Art „Eigene Liste“ verwendet und mit dieser Veranstaltung "
+"gespeichert. Listet auch Teilnehmende auf, deren Bestellung noch offen ist "
+"(noch nicht bezahlt oder auf Genehmigung wartend)."
+
+#: pretix_participantlist/exporters.py
+#: pretix_participantlist/models.py
+msgid "Include pending payments"
+msgstr "Offene Zahlungen einbeziehen"
+
+#: pretix_participantlist/exporters.py
+msgid ""
+"Also list participants whose order is still pending (not yet paid, or "
+"awaiting approval)."
+msgstr ""
+"Listet auch Teilnehmende auf, deren Bestellung noch offen ist (noch nicht "
+"bezahlt oder auf Genehmigung wartend)."
+
+#: pretix_participantlist/models.py
+msgid ""
+"Also list participants whose order is still pending (not yet paid, or "
+"awaiting approval) in generated lists of this kind. Otherwise only paid "
+"orders are listed."
+msgstr ""
+"Listet in erzeugten Listen dieser Art auch Teilnehmende auf, deren "
+"Bestellung noch offen ist (noch nicht bezahlt oder auf Genehmigung "
+"wartend). Sonst werden nur bezahlte Bestellungen aufgelistet."

@@ -88,7 +88,7 @@ class ListConfigurationForm(forms.ModelForm):
 
     class Meta:
         model = ListConfiguration
-        fields = ("name", "is_confidential", "filename_suffix")
+        fields = ("name", "is_confidential", "include_pending", "filename_suffix")
 
     def __init__(self, *args, organizer=None, **kwargs):
         self.organizer = organizer

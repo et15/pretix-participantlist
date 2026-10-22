@@ -17,6 +17,11 @@ def test_create_list_configuration(organizer):
     assert str(organizer.name) in str(kind)
 
 
+def test_list_configuration_leaves_out_pending_payments_by_default(organizer):
+    kind = ListConfiguration.objects.create(organizer=organizer, name="Kurz")
+    assert kind.include_pending is False
+
+
 def test_create_organizer_branding(organizer):
     branding = OrganizerBranding.objects.create(
         organizer=organizer, header_text="Example Org"

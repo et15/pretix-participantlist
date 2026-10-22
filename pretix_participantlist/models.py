@@ -88,6 +88,15 @@ class ListConfiguration(LoggedModel):
             "generated PDF lists of this kind."
         ),
     )
+    include_pending = models.BooleanField(
+        default=False,
+        verbose_name=_("Include pending payments"),
+        help_text=_(
+            "Also list participants whose order is still pending (not yet paid, "
+            "or awaiting approval) in generated lists of this kind. Otherwise "
+            "only paid orders are listed."
+        ),
+    )
     filename_suffix = models.CharField(
         max_length=64,
         blank=True,
