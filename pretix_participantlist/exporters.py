@@ -78,6 +78,7 @@ COLUMN_WEIGHTS = {
     "name": 2.2,
     "email": 2.4,
     "order_code": 1.1,
+    "status": 1.1,
     "ticket": 1.6,
     "company": 1.6,
     "address": 2.4,

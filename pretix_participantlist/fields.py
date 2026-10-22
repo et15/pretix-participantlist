@@ -16,6 +16,7 @@ STATIC_FIELD_CHOICES = [
     ("age", _("Age")),
     ("email", _("Email")),
     ("order_code", _("Order code")),
+    ("status", _("Order status")),
     ("ticket", _("Ticket type")),
     ("company", _("Company")),
     ("address", _("Address")),
@@ -396,6 +397,8 @@ def extract_static_field(position, key, index=None, birth_date_identifier=""):
         return _attendee_email(position)
     if key == "order_code":
         return position.order.code
+    if key == "status":
+        return str(position.order.get_status_display())
     if key == "ticket":
         return _ticket_name(position)
     if key == "company":

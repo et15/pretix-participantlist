@@ -922,3 +922,36 @@ def test_csv_exporter_can_include_pending_payments(event, item, position):
 
     assert paid_only[1:] == [["Jane Doe"]]
     assert everyone[1:] == [["Jane Doe"], ["Pending Pia"]]
+
+
+def test_pdf_exporter_status_column_shows_order_status(event, item, position):
+    _make_pending_position(event, item, "PEND1", "Pending Pia")
+    kind = ListConfiguration.objects.create(
+        organizer=event.organizer,
+        name="Kurz",
+        default_fields=["name", "status"],
+        sort_fields=["name"],
+        is_default=True,
+        include_pending=True,
+    )
+
+    exporter = AttendeeListPDFExporter(event=event, organizer=event.organizer)
+    _filename, _content_type, data = exporter.render({"list": str(kind.pk)})
+
+    text = _pdf_text(data)
+    assert "Order status" in text
+    assert "paid" in text
+    assert "pending" in text
+
+
+def test_csv_exporter_status_field(event, item, position):
+    _make_pending_position(event, item, "PEND1", "Pending Pia")
+
+    rows = list(
+        _csv_exporter(event).iterate_list(
+            {"fields": ["name", "status"], "include_pending": True}
+        )
+    )
+
+    assert rows[0] == ["Name", "Order status"]
+    assert rows[1:] == [["Jane Doe", "paid"], ["Pending Pia", "pending"]]

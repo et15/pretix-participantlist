@@ -2,7 +2,7 @@ import datetime
 
 import pytest
 from django.utils.timezone import now
-from pretix.base.models import Event, OrderPosition, Question
+from pretix.base.models import Event, Order, OrderPosition, Question
 
 from pretix_participantlist.fields import (
     birth_date_question_identifier,
@@ -286,3 +286,14 @@ def test_parse_column_spec_reads_titles(organizer):
 def test_column_spec_with_titles_round_trips(organizer):
     text = "name=Teilnehmer*in\nemail+ticket\nsigning=Unterschrift"
     assert format_column_spec(parse_column_spec(text, organizer)) == text
+
+
+def test_extract_static_field_status(position):
+    assert extract_static_field(position, "status") == "paid"
+    position.order.status = Order.STATUS_PENDING
+    assert extract_static_field(position, "status") == "pending"
+
+
+def test_status_is_a_known_column_and_sort_token(organizer):
+    assert parse_column_spec("name\nstatus", organizer) == [["name"], ["status"]]
+    assert parse_sort_spec("status", organizer) == ["status"]

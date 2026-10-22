@@ -18,7 +18,7 @@ Features
 - **Custom list**: per event, columns can also be typed in directly, one per
   line. Join fields with ``+`` to stack them in one column and append ``=Title``
   to set the column header, e.g. ``email+ticket=Contact``.
-- **Fields**: index, name, first/last name, age, email, order code, ticket type,
+- **Fields**: index, name, first/last name, age, email, order code, order status, ticket type,
   company, address, a signature column and any question with an identifier
   (``question:<identifier>``). The age is computed from the organizer-wide
   birth date question.
