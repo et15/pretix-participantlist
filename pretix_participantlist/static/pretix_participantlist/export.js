@@ -1,8 +1,13 @@
-/* Export page: copy a list kind into the "Custom list" fields. */
+/* Export page: copy a list kind into the "Custom list" fields, and grey out
+ * those fields while another list kind is selected. */
 (function () {
     "use strict";
 
     var CUSTOM_VALUE = "__custom__";
+    var CUSTOM_FIELDS = [
+        "custom_name", "custom_columns", "custom_sort",
+        "custom_include_pending", "custom_save"
+    ];
 
     function named(form, name) {
         return form.querySelector('[name="' + name + '"], [name$="-' + name + '"]');
@@ -41,6 +46,21 @@
         }
     }
 
+    function syncCustomFields(form) {
+        var enabled = selectedKind(form) === CUSTOM_VALUE;
+        CUSTOM_FIELDS.forEach(function (name) {
+            var input = named(form, name);
+            if (!input) {
+                return;
+            }
+            input.disabled = !enabled;
+            var group = input.closest(".form-group");
+            if (group) {
+                group.style.opacity = enabled ? "" : "0.5";
+            }
+        });
+    }
+
     function setValue(form, name, value) {
         var input = named(form, name);
         if (!input) {
@@ -53,6 +73,19 @@
         }
         input.dispatchEvent(new Event("change", {bubbles: true}));
     }
+
+    document.addEventListener("change", function (event) {
+        var form = event.target.form;
+        if (form && event.target.matches('[name="list"], [name$="-list"]') &&
+                named(form, "custom_columns")) {
+            syncCustomFields(form);
+        }
+    });
+
+    document.querySelectorAll('[name="custom_columns"], [name$="-custom_columns"]')
+        .forEach(function (input) {
+            syncCustomFields(input.form);
+        });
 
     document.addEventListener("click", function (event) {
         var button = event.target.closest(".participantlist-adopt");
