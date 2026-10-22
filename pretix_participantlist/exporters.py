@@ -228,8 +228,8 @@ class AttendeeListPDFExporter(ReportlabExportMixin, BaseExporter):
                         required=False,
                         initial=self.event.settings.get(CUSTOM_NAME_SETTING) or "",
                         help_text=_(
-                            'Only used for the kind "Custom list", saved with '
-                            "this event. Shown in the header of the PDF. Defaults "
+                            'Only used for the kind "Custom list". '
+                            "Shown in the header of the PDF. Defaults "
                             'to "Custom list" if left empty.'
                         ),
                     ),
@@ -243,8 +243,8 @@ class AttendeeListPDFExporter(ReportlabExportMixin, BaseExporter):
                         initial=self.event.settings.get(CUSTOM_COLUMNS_SETTING) or "",
                         validators=[self._spec_validator(parse_column_spec)],
                         help_text=_(
-                            'Only used for the kind "Custom list", saved with '
-                            "this event. One column per line, in the order they "
+                            'Only used for the kind "Custom list". '
+                            "One column per line, in the order they "
                             "should appear in the PDF. Combine two or more fields "
                             'into a single stacked column by joining them with "+", '
                             'e.g. "email+ticket". Append "=Title" to set the column '
@@ -265,8 +265,8 @@ class AttendeeListPDFExporter(ReportlabExportMixin, BaseExporter):
                         initial=self.event.settings.get(CUSTOM_SORT_SETTING) or "",
                         validators=[self._spec_validator(parse_sort_spec)],
                         help_text=_(
-                            'Only used for the kind "Custom list", saved with '
-                            "this event. One field per line, in priority order. "
+                            'Only used for the kind "Custom list". '
+                            "One field per line, in priority order. "
                             'Prefix a field with "-" for descending order, e.g. '
                             '"-name". Static fields: %s.'
                         )
@@ -282,9 +282,23 @@ class AttendeeListPDFExporter(ReportlabExportMixin, BaseExporter):
                             CUSTOM_INCLUDE_PENDING_SETTING, as_type=bool, default=False
                         ),
                         help_text=_(
-                            'Only used for the kind "Custom list", saved with '
-                            "this event. Also list participants whose order is "
+                            'Only used for the kind "Custom list". '
+                            "Also list participants whose order is "
                             "still pending (not yet paid, or awaiting approval)."
+                        ),
+                    ),
+                ),
+                (
+                    "custom_save",
+                    forms.BooleanField(
+                        label=_("Custom list: save these settings"),
+                        required=False,
+                        initial=True,
+                        help_text=_(
+                            'Only used for the kind "Custom list". Saves the '
+                            "custom list settings above with this event, so the "
+                            "form is pre-filled with them next time. If "
+                            "unticked, they are only used for this export."
                         ),
                     ),
                 ),
@@ -295,7 +309,10 @@ class AttendeeListPDFExporter(ReportlabExportMixin, BaseExporter):
         self.form_data = form_data
         kind_value = form_data.get("list") or ALL_KINDS_VALUE
         if kind_value == CUSTOM_KIND_VALUE:
-            self._save_custom_definition(form_data)
+            # Missing (e.g. scheduled exports stored before this option
+            # existed) counts as ticked, which was the only behaviour then.
+            if form_data.get("custom_save", True):
+                self._save_custom_definition(form_data)
         elif kind_value == ALL_KINDS_VALUE:
             kinds = list(
                 ListConfiguration.objects.filter(organizer=self.event.organizer)

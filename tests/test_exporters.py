@@ -148,6 +148,7 @@ def test_export_form_has_custom_list_choice_and_no_checkbox_fields(event):
         "custom_columns",
         "custom_sort",
         "custom_include_pending",
+        "custom_save",
     ]
     assert CUSTOM_KIND_VALUE in dict(form_fields["list"].choices)
 
@@ -980,3 +981,27 @@ def test_export_form_has_no_copy_button_without_kinds(event):
     exporter = AttendeeListPDFExporter(event=event, organizer=event.organizer)
 
     assert not exporter.export_form_fields["list"].help_text
+
+
+def test_custom_list_is_not_saved_when_save_is_unticked(event, position):
+    exporter = AttendeeListPDFExporter(event=event, organizer=event.organizer)
+    _filename, _content_type, data = exporter.render(
+        {
+            "list": CUSTOM_KIND_VALUE,
+            "custom_name": "Wanderliste",
+            "custom_columns": "name\norder_code",
+            "custom_sort": "-name",
+            "custom_include_pending": True,
+            "custom_save": False,
+        }
+    )
+
+    text = _pdf_text(data)
+    assert "Wanderliste" in text
+    assert "ABC12" in text
+
+    event.settings.flush()
+    assert not event.settings.get(CUSTOM_NAME_SETTING)
+    assert not event.settings.get(CUSTOM_COLUMNS_SETTING)
+    assert not event.settings.get(CUSTOM_SORT_SETTING)
+    assert not event.settings.get(CUSTOM_INCLUDE_PENDING_SETTING, as_type=bool)
