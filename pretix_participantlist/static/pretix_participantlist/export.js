@@ -1,4 +1,4 @@
-/* Export page: copy a list kind into the "Custom list" fields, and grey out
+/* Export page: copy a list kind into the "Custom list" fields, and hide
  * those fields while another list kind is selected. */
 (function () {
     "use strict";
@@ -56,7 +56,7 @@
             input.disabled = !enabled;
             var group = input.closest(".form-group");
             if (group) {
-                group.style.opacity = enabled ? "" : "0.5";
+                group.style.display = enabled ? "" : "none";
             }
         });
     }
