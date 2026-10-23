@@ -1,3 +1,9 @@
+## v0.3.1 (2026-10-23)
+
+### Feat
+
+- hide custom list fields unless the custom list is selected
+
 ## v0.3.0 (2026-10-23)
 
 ### Feat
