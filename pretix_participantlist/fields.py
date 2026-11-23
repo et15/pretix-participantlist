@@ -2,9 +2,10 @@ import datetime
 from collections import namedtuple
 
 from django.core.exceptions import ObjectDoesNotExist
+from django.db.models import Prefetch
 from django.utils.translation import gettext_lazy as _
 from django.utils.translation import pgettext_lazy
-from pretix.base.models import Question
+from pretix.base.models import Checkin, Question
 
 # pretix' own catalog translates a plain "Signature" as "Signatur", which would
 # win over ours; the message context keeps our "Unterschrift" effective.
@@ -17,6 +18,7 @@ STATIC_FIELD_CHOICES = [
     ("email", _("Email")),
     ("order_code", _("Order code")),
     ("status", _("Order status")),
+    ("checked_in", _("Checked in")),
     ("ticket", _("Ticket type")),
     ("company", _("Company")),
     ("address", _("Address")),
@@ -338,6 +340,34 @@ def _ticket_name(position):
     return name
 
 
+ENTRY_CHECKINS_ATTR = "entry_checkins"
+
+
+def entry_checkins_prefetch():
+    """Prefetch of a position's successful entry check-ins on any list."""
+    return Prefetch(
+        "all_checkins",
+        queryset=Checkin.objects.filter(successful=True, type=Checkin.TYPE_ENTRY),
+        to_attr=ENTRY_CHECKINS_ATTR,
+    )
+
+
+def entry_checkins(position):
+    """Successful entry check-ins of the position, on any check-in list.
+
+    Uses ``entry_checkins_prefetch`` where the caller set it up, else queries.
+    """
+    prefetched = getattr(position, ENTRY_CHECKINS_ATTR, None)
+    if prefetched is not None:
+        return prefetched
+    return list(position.all_checkins.filter(successful=True, type=Checkin.TYPE_ENTRY))
+
+
+def _checked_in(position):
+    """Yes/No: any successful entry, even if the person has left again since."""
+    return str(_("Yes") if entry_checkins(position) else _("No"))
+
+
 def birth_date_question_identifier(organizer):
     """The organizer-wide identifier of the birth date question, or ""."""
     from .models import OrganizerBranding
@@ -399,6 +429,8 @@ def extract_static_field(position, key, index=None, birth_date_identifier=""):
         return position.order.code
     if key == "status":
         return str(position.order.get_status_display())
+    if key == "checked_in":
+        return _checked_in(position)
     if key == "ticket":
         return _ticket_name(position)
     if key == "company":

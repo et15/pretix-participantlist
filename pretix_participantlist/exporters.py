@@ -6,7 +6,7 @@ from typing import ClassVar
 from xml.sax.saxutils import escape
 
 from django import forms
-from django.db.models import Exists, OuterRef, Prefetch
+from django.db.models import Exists, OuterRef
 from django.utils.functional import cached_property
 from django.utils.html import format_html, format_html_join
 from django.utils.text import slugify
@@ -36,6 +36,8 @@ from .fields import (
     ColumnGroup,
     address_lines,
     birth_date_question_identifier,
+    entry_checkins,
+    entry_checkins_prefetch,
     extract_static_field,
     format_column_spec,
     format_sort_spec,
@@ -82,6 +84,7 @@ COLUMN_WEIGHTS = {
     "email": 2.4,
     "order_code": 1.1,
     "status": 1.1,
+    "checked_in": 1.0,
     "ticket": 1.6,
     "company": 1.6,
     "address": 2.4,
@@ -112,8 +115,8 @@ def _listed_order_statuses(include_pending=False):
     return (Order.STATUS_PAID,)
 
 
-def _position_queryset(event, include_pending=False):
-    return (
+def _position_queryset(event, include_pending=False, with_checkins=False):
+    qs = (
         OrderPosition.objects.filter(
             order__event=event,
             order__status__in=_listed_order_statuses(include_pending),
@@ -122,6 +125,20 @@ def _position_queryset(event, include_pending=False):
         .prefetch_related("answers", "answers__question")
         .order_by("order__code", "positionid")
     )
+    if with_checkins:
+        qs = qs.prefetch_related(entry_checkins_prefetch())
+    return qs
+
+
+def _kind_uses_field(kind, token):
+    """Whether the list kind shows or sorts by the given field."""
+    if not kind:
+        return False
+    in_columns = any(
+        token in group for group in parse_default_fields(kind.default_fields)
+    )
+    in_sort = any(t.lstrip("-") == token for t in kind.sort_fields or [])
+    return in_columns or in_sort
 
 
 class AttendeeListPDFExporter(ReportlabExportMixin, BaseExporter):
@@ -485,7 +502,9 @@ class AttendeeListPDFExporter(ReportlabExportMixin, BaseExporter):
     def _sorted_positions(self, kind):
         positions = list(
             _position_queryset(
-                self.event, include_pending=bool(kind and kind.include_pending)
+                self.event,
+                include_pending=bool(kind and kind.include_pending),
+                with_checkins=_kind_uses_field(kind, "checked_in"),
             )
         )
         if not kind or not kind.sort_fields:
@@ -758,9 +777,10 @@ class AttendeeListCSVExporter(ListExporter):
     CSV_FIELD_CHOICES: ClassVar = [c for c in STATIC_FIELD_CHOICES if c[0] != "signing"]
     #: Per-position data that only the multi-event export offers.
     CHECKIN_FIELD_CHOICES: ClassVar = [
-        ("checked_in", _("Checked in")),
         ("last_checkin", _("Last check-in")),
     ]
+    #: Fields that need the positions' check-ins loaded.
+    CHECKIN_KEYS: ClassVar = {"checked_in", "last_checkin"}
     DEFAULT_CSV_FIELDS: ClassVar = ["name", "email", "order_code", "ticket"]
 
     def _question_choices(self):
@@ -839,15 +859,9 @@ class AttendeeListCSVExporter(ListExporter):
         )
 
     @staticmethod
-    def _checkin_value(position, key):
-        """Check-in data from the position's successful entry check-ins.
-
-        "Checked in" means at least one successful entry on any check-in list
-        of the event, whether or not the person has left again since.
-        """
-        entries = position.entry_checkins
-        if key == "checked_in":
-            return str(_("Yes") if entries else _("No"))
+    def _last_checkin(position):
+        """Time of the position's last successful entry on any check-in list."""
+        entries = entry_checkins(position)
         if not entries:
             return ""
         last = max(c.datetime for c in entries)
@@ -885,17 +899,8 @@ class AttendeeListCSVExporter(ListExporter):
                     )
                 )
             )
-        checkin_keys = {key for key, _label in self.CHECKIN_FIELD_CHOICES}
-        if checkin_keys.intersection(fields):
-            qs = qs.prefetch_related(
-                Prefetch(
-                    "all_checkins",
-                    queryset=Checkin.objects.filter(
-                        successful=True, type=Checkin.TYPE_ENTRY
-                    ),
-                    to_attr="entry_checkins",
-                )
-            )
+        if self.CHECKIN_KEYS.intersection(fields):
+            qs = qs.prefetch_related(entry_checkins_prefetch())
         birth_date_identifier = birth_date_question_identifier(self.organizer)
         for index, position in enumerate(qs, start=1):
             answers = {a.question.identifier: str(a) for a in position.answers.all()}
@@ -903,8 +908,8 @@ class AttendeeListCSVExporter(ListExporter):
             for key in fields:
                 if key.startswith(QUESTION_TOKEN_PREFIX):
                     row.append(answers.get(key[len(QUESTION_TOKEN_PREFIX) :], ""))
-                elif key in checkin_keys:
-                    row.append(self._checkin_value(position, key))
+                elif key == "last_checkin":
+                    row.append(self._last_checkin(position))
                 else:
                     row.append(
                         extract_static_field(

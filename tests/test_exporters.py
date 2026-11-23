@@ -978,6 +978,69 @@ def test_csv_exporter_can_include_pending_payments(event, item, position):
     assert everyone[1:] == [["Jane Doe"], ["Pending Pia"]]
 
 
+def test_pdf_exporter_checked_in_column(event, item, position):
+    checkin_list = event.checkin_lists.create(name="Main", all_products=True)
+    _make_position(event, item, "WAIT1", "Waiting Wanda")
+    _checkin(position, checkin_list, now())
+    kind = ListConfiguration.objects.create(
+        organizer=event.organizer,
+        name="Kurz",
+        default_fields=["name", "status", "checked_in"],
+        sort_fields=["-checked_in"],
+        is_default=True,
+    )
+
+    exporter = AttendeeListPDFExporter(event=event, organizer=event.organizer)
+    _filename, _content_type, data = exporter.render({"list": str(kind.pk)})
+
+    text = _pdf_text(data)
+    table = text[text.index("Name\nOrder status") :].splitlines()
+    # Sorted by "checked in", descending: "Yes" before "No".
+    assert table == [
+        "Name",
+        "Order status",
+        "Checked in",
+        "Jane Doe",
+        "paid",
+        "Yes",
+        "Waiting Wanda",
+        "paid",
+        "No",
+    ]
+
+
+def test_pdf_exporter_loads_checkins_only_for_kinds_that_use_them(event, item):
+    def kind_with(fields, sort=()):
+        return ListConfiguration(
+            organizer=event.organizer, default_fields=fields, sort_fields=list(sort)
+        )
+
+    exporter = AttendeeListPDFExporter(event=event, organizer=event.organizer)
+    checkin_list = event.checkin_lists.create(name="Main", all_products=True)
+    for code in ("AAA11", "BBB22"):
+        _checkin(_make_position(event, item, code, code), checkin_list, now())
+
+    for kind in (
+        kind_with(["name", "checked_in"]),
+        kind_with([["name", "checked_in"]]),
+        kind_with(["name"], sort=["-checked_in"]),
+    ):
+        positions = exporter._sorted_positions(kind)
+        assert all(hasattr(p, "entry_checkins") for p in positions)
+    positions = exporter._sorted_positions(kind_with(["name"]))
+    assert not any(hasattr(p, "entry_checkins") for p in positions)
+
+
+def test_csv_exporter_offers_checked_in_next_to_status(event, position):
+    keys = [
+        key
+        for key, _label in _csv_exporter(event).additional_form_fields["fields"].choices
+    ]
+
+    assert keys.count("checked_in") == 1
+    assert keys.index("checked_in") == keys.index("status") + 1
+
+
 def test_pdf_exporter_status_column_shows_order_status(event, item, position):
     _make_pending_position(event, item, "PEND1", "Pending Pia")
     kind = ListConfiguration.objects.create(

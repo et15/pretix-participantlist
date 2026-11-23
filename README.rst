@@ -22,7 +22,7 @@ Features
   point; the custom list is only remembered for the event if "save these
   settings" is ticked.
 - **Fields**: index, name, first/last name, age, email, order code, order
-  status, ticket type, company, address, a signature column and any question
+  status, checked in (yes/no), ticket type, company, address, a signature column and any question
   with an identifier (``question:<identifier>``). The age is computed from the organizer-wide
   birth date question.
 - **Branding**: logo and header text of the PDF, configured per organizer.

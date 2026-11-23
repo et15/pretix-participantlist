@@ -5,6 +5,7 @@ from django.utils.timezone import now
 from pretix.base.models import Event, Order, OrderPosition, Question
 
 from pretix_participantlist.fields import (
+    STATIC_FIELD_CHOICES,
     birth_date_question_identifier,
     extract_static_field,
     format_column_spec,
@@ -297,3 +298,31 @@ def test_extract_static_field_status(position):
 def test_status_is_a_known_column_and_sort_token(organizer):
     assert parse_column_spec("name\nstatus", organizer) == [["name"], ["status"]]
     assert parse_sort_spec("status", organizer) == ["status"]
+
+
+def test_checked_in_comes_right_after_status():
+    keys = [key for key, _label in STATIC_FIELD_CHOICES]
+    assert keys.index("checked_in") == keys.index("status") + 1
+
+
+def test_extract_static_field_checked_in(event, position):
+    checkin_list = event.checkin_lists.create(name="Main", all_products=True)
+    assert extract_static_field(position, "checked_in") == "No"
+
+    when = now()
+    position.all_checkins.create(list=checkin_list, datetime=when, type="exit")
+    position.all_checkins.create(
+        list=checkin_list, datetime=when, successful=False, error_reason="unpaid"
+    )
+    assert extract_static_field(position, "checked_in") == "No"
+
+    position.all_checkins.create(list=checkin_list, datetime=when)
+    assert extract_static_field(position, "checked_in") == "Yes"
+
+
+def test_checked_in_is_a_known_column_and_sort_token(organizer):
+    assert parse_column_spec("name\nchecked_in", organizer) == [
+        ["name"],
+        ["checked_in"],
+    ]
+    assert parse_sort_spec("-checked_in", organizer) == ["-checked_in"]
