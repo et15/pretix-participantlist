@@ -518,6 +518,10 @@ class AttendeeListPDFExporter(ReportlabExportMixin, BaseExporter):
                 answers_by_question = {a.question_id: a for a in position.answers.all()}
                 answer = answers_by_question.get(field.pk)
                 return str(answer).lower() if answer else ""
+            if field == "checked_in":
+                # By the value, not the translated "Yes"/"No" text, so the
+                # order doesn't depend on the language: not checked in first.
+                return bool(entry_checkins(position))
             value = extract_static_field(
                 position, field, birth_date_identifier=self._birth_date_identifier
             )

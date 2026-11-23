@@ -23,6 +23,7 @@ from pretix_participantlist.exporters import (
     AttendeeListCSVExporter,
     AttendeeListPDFExporter,
 )
+from pretix_participantlist.fields import extract_static_field
 from pretix_participantlist.models import (
     ListConfiguration,
     OrganizerBranding,
@@ -1007,6 +1008,39 @@ def test_pdf_exporter_checked_in_column(event, item, position):
         "paid",
         "No",
     ]
+
+
+@pytest.mark.parametrize("language", ["en", "de"])
+def test_sorting_by_checked_in_does_not_depend_on_language(
+    event, item, position, language
+):
+    from django.utils import translation
+
+    checkin_list = event.checkin_lists.create(name="Main", all_products=True)
+    waiting = _make_position(event, item, "WAIT1", "Waiting Wanda")
+    _checkin(position, checkin_list, now())
+    exporter = AttendeeListPDFExporter(event=event, organizer=event.organizer)
+
+    def sorted_by(sort_field):
+        kind = ListConfiguration(
+            organizer=event.organizer,
+            default_fields=["name", "checked_in"],
+            sort_fields=[sort_field],
+        )
+        return [p.pk for p in exporter._sorted_positions(kind)]
+
+    with translation.override(language):
+        # The labels differ ("Yes"/"No" vs. "Ja"/"Nein") ...
+        assert (
+            extract_static_field(position, "checked_in")
+            == {
+                "en": "Yes",
+                "de": "Ja",
+            }[language]
+        )
+        # ... the order doesn't: not checked in first when ascending.
+        assert sorted_by("checked_in") == [waiting.pk, position.pk]
+        assert sorted_by("-checked_in") == [position.pk, waiting.pk]
 
 
 def test_pdf_exporter_loads_checkins_only_for_kinds_that_use_them(event, item):
