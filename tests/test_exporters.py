@@ -767,6 +767,59 @@ def test_csv_exporter_iterate_list_checkin(event, item, position):
     ]
 
 
+def test_csv_exporter_offers_checked_in_only_option(event, position):
+    field = _csv_exporter(event).additional_form_fields["checked_in_only"]
+
+    assert field.label == "Checked-in participants only"
+    assert field.initial is False
+
+
+def test_csv_exporter_can_list_checked_in_participants_only(event, item, position):
+    checkin_list = event.checkin_lists.create(name="Main", all_products=True)
+    _make_position(event, item, "WAIT1", "Waiting Wanda")
+    failed = _make_position(event, item, "FAIL1", "Failed Fred")
+    left = _make_position(event, item, "LEFT1", "Left Lena")
+    exit_only = _make_position(event, item, "EXIT1", "Exit Emil")
+    when = datetime.datetime(2026, 7, 20, 8, 0, tzinfo=datetime.UTC)
+    _checkin(position, checkin_list, when)
+    _checkin(position, checkin_list, when + datetime.timedelta(hours=1))
+    _checkin(left, checkin_list, when)
+    _checkin(left, checkin_list, when + datetime.timedelta(hours=2), type="exit")
+    _checkin(exit_only, checkin_list, when, type="exit")
+    _checkin(failed, checkin_list, when, successful=False, error_reason="unpaid")
+
+    everyone = list(_csv_exporter(event).iterate_list({"fields": ["name"]}))
+    checked_in = list(
+        _csv_exporter(event).iterate_list(
+            {"fields": ["index", "name"], "checked_in_only": True}
+        )
+    )
+
+    assert len(everyone) == 6
+    # Several entries still give one row; rows are numbered after filtering.
+    assert checked_in == [["index", "Name"], [1, "Jane Doe"], [2, "Left Lena"]]
+
+
+def test_csv_exporter_checked_in_only_combines_with_include_pending(
+    event, item, position
+):
+    checkin_list = event.checkin_lists.create(name="Main", all_products=True)
+    pending = _make_pending_position(event, item, "PEND1", "Pending Pia")
+    _checkin(pending, checkin_list, datetime.datetime(2026, 7, 20, tzinfo=datetime.UTC))
+
+    paid_only = list(
+        _csv_exporter(event).iterate_list({"fields": ["name"], "checked_in_only": True})
+    )
+    with_pending = list(
+        _csv_exporter(event).iterate_list(
+            {"fields": ["name"], "checked_in_only": True, "include_pending": True}
+        )
+    )
+
+    assert paid_only[1:] == []
+    assert with_pending[1:] == [["Pending Pia"]]
+
+
 def test_csv_exporter_checkin_fields_not_loaded_when_unused(
     event, position, django_assert_num_queries
 ):

@@ -407,6 +407,19 @@ msgstr ""
 "Listet auch Teilnehmende auf, deren Bestellung noch offen ist (noch nicht "
 "bezahlt oder auf Genehmigung wartend)."
 
+#: pretix_participantlist/exporters.py
+msgid "Checked-in participants only"
+msgstr "Nur eingecheckte Teilnehmende"
+
+#: pretix_participantlist/exporters.py
+msgid ""
+"Only list participants with at least one successful entry on any check-in "
+"list of their event, whether or not they have left again since."
+msgstr ""
+"Listet nur Teilnehmende auf, die mindestens einmal erfolgreich auf einer "
+"beliebigen Check-in-Liste ihrer Veranstaltung eingecheckt wurden, auch wenn "
+"sie inzwischen wieder ausgecheckt sind."
+
 #: pretix_participantlist/models.py
 msgid ""
 "Also list participants whose order is still pending (not yet paid, or "

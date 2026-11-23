@@ -6,7 +6,7 @@ from typing import ClassVar
 from xml.sax.saxutils import escape
 
 from django import forms
-from django.db.models import Prefetch
+from django.db.models import Exists, OuterRef, Prefetch
 from django.utils.functional import cached_property
 from django.utils.html import format_html, format_html_join
 from django.utils.text import slugify
@@ -809,6 +809,19 @@ class AttendeeListCSVExporter(ListExporter):
                         ),
                     ),
                 ),
+                (
+                    "checked_in_only",
+                    forms.BooleanField(
+                        label=_("Checked-in participants only"),
+                        required=False,
+                        initial=False,
+                        help_text=_(
+                            "Only list participants with at least one successful "
+                            "entry on any check-in list of their event, whether "
+                            "or not they have left again since."
+                        ),
+                    ),
+                ),
             ]
         )
 
@@ -861,6 +874,17 @@ class AttendeeListCSVExporter(ListExporter):
             .prefetch_related("answers", "answers__question")
             .order_by("order__event__date_from", "order__code", "positionid")
         )
+        if form_data.get("checked_in_only"):
+            # Same notion of "checked in" as the "Checked in" column.
+            qs = qs.filter(
+                Exists(
+                    Checkin.objects.filter(
+                        position=OuterRef("pk"),
+                        successful=True,
+                        type=Checkin.TYPE_ENTRY,
+                    )
+                )
+            )
         checkin_keys = {key for key, _label in self.CHECKIN_FIELD_CHOICES}
         if checkin_keys.intersection(fields):
             qs = qs.prefetch_related(
