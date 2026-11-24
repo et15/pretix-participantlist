@@ -25,7 +25,9 @@ If the upstream checklist changes, it wins over this copy.
 5. Registered URLs are unlikely to clash with other plugins or future core URLs.
 
 ### C. Security
-1. Important actions are logged (`log_action`) and a `logentry_display` receiver renders every action type used.
+1. Important actions are logged (`log_action`) and every action type used has a human-readable text, registered
+   via the `log_entry_types` registry (pretix deprecated the `logentry_display` signal for new types); see
+   `pretix_participantlist/logs.py`.
 2. All views require appropriate permissions and use `event_urls` / `event_patterns` where appropriate.
 3. Customer session data uses the cart session system where appropriate.
 4. Payment providers: no card numbers stored; refunds are notified via webhook; webhooks are signature-verified or not trusted (data re-fetched from the API).
@@ -60,7 +62,7 @@ If the upstream checklist changes, it wins over this copy.
 Remove an entry once it is fixed.
 
 - A6: no security contact (only a GitHub noreply address).
-- C1: nothing is logged (list kinds, default kind, branding, exporter settings); no `logentry_display` receiver.
 - E1: `de` catalog nearly empty; filename prefix and CSV header not translated.
 - E2: hardcoded `strftime("%Y-%m-%d %H:%M")` for the "Last check-in" column.
-- G3/G4: no client tests for the control views and no permission-denial tests.
+- G3/G4: client and permission-denial tests cover only the state-changing control views (`tests/test_logs.py`),
+  not the list, placeholder and branding pages (GET).

@@ -30,4 +30,4 @@ class PluginApp(PluginConfig):
         navigation_links = []
 
     def ready(self):
-        from . import signals  # NOQA
+        from . import logs, signals  # NOQA

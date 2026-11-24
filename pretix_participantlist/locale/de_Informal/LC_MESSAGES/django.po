@@ -447,3 +447,60 @@ msgstr ""
 "Einstellungen der eigenen Liste bei dieser Veranstaltung, sodass das "
 "Formular beim nächsten Mal damit vorbelegt ist. Ohne Haken gelten sie nur "
 "für diesen Export."
+
+#: pretix_participantlist/logs.py
+msgid "(deleted)"
+msgstr "(gelöscht)"
+
+#: pretix_participantlist/logs.py
+msgid "The participant list branding has been changed."
+msgstr "Das Branding der Teilnehmendenliste wurde geändert."
+
+#: pretix_participantlist/logs.py
+msgid "Participant list branding"
+msgstr "Branding der Teilnehmendenliste"
+
+#: pretix_participantlist/logs.py
+msgid "List kind {val}"
+msgstr "Listenart {val}"
+
+#: pretix_participantlist/logs.py
+msgid "The list kind has been changed."
+msgstr "Die Listenart wurde geändert."
+
+#: pretix_participantlist/logs.py
+msgid "The list kind \"{name}\" has been deleted."
+msgstr "Die Listenart „{name}“ wurde gelöscht."
+
+#: pretix_participantlist/logs.py
+msgid "The list kind has been made the default list kind."
+msgstr "Die Listenart wurde zur Standard-Listenart gemacht."
+
+#: pretix_participantlist/logs.py
+msgid ""
+"The list kind has been made the default list kind automatically, because "
+"the previous default list kind was deleted."
+msgstr ""
+"Die Listenart wurde automatisch zur Standard-Listenart gemacht, weil die "
+"bisherige Standard-Listenart gelöscht wurde."
+
+#: pretix_participantlist/logs.py
+msgid "The saved custom participant list of this event has been changed."
+msgstr ""
+"Die gespeicherte eigene Teilnehmendenliste dieser Veranstaltung wurde "
+"geändert."
+
+#: pretix_participantlist/logs.py
+msgid "The participant list \"{list_name}\" has been exported (PDF)."
+msgstr "Die Teilnehmendenliste „{list_name}“ wurde exportiert (PDF)."
+
+#: pretix_participantlist/logs.py
+msgid "The participant lists of all list kinds have been exported."
+msgstr "Die Teilnehmendenlisten aller Listenarten wurden exportiert."
+
+#: pretix_participantlist/logs.py
+msgid ""
+"A participant list has been exported (CSV/Excel) for these events: {events}."
+msgstr ""
+"Eine Teilnehmendenliste wurde für diese Veranstaltungen exportiert "
+"(CSV/Excel): {events}."
