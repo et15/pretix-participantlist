@@ -1,3 +1,9 @@
+## v0.4.1 (2026-11-24)
+
+### Fix
+
+- show the "<identifier>" placeholder in the custom columns help text
+
 ## v0.4.0 (2026-11-24)
 
 ### BREAKING CHANGE
