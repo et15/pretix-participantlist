@@ -1261,3 +1261,12 @@ def test_pdf_exporter_prints_event_title_bold_and_date_regular(event, position):
     }
     assert title_fonts and all(f.endswith("-Bold") for f in title_fonts)
     assert date_fonts and not any(f.endswith("-Bold") for f in date_fonts)
+
+
+def test_export_form_escapes_placeholder_in_columns_help_text(event):
+    exporter = AttendeeListPDFExporter(event=event, organizer=event.organizer)
+
+    help_text = str(exporter.export_form_fields["custom_columns"].help_text)
+
+    assert "question:&lt;identifier&gt;" in help_text
+    assert "<identifier>" not in help_text

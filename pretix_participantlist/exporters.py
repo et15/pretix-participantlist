@@ -221,6 +221,23 @@ class AttendeeListPDFExporter(ReportlabExportMixin, BaseExporter):
         )
         tokens = [key for key, _label in STATIC_FIELD_CHOICES]
         sortable_tokens = [t for t in tokens if t not in NON_SORTABLE_STATIC_FIELDS]
+        # pretix renders help texts as HTML: escape the text so the
+        # "<identifier>" placeholder is shown instead of read as a tag.
+        columns_help = format_html(
+            "{}",
+            _(
+                'Only used for the kind "Custom list". '
+                "One column per line, in the order they "
+                "should appear in the PDF. Combine two or more fields "
+                'into a single stacked column by joining them with "+", '
+                'e.g. "email+ticket". Append "=Title" to set the column '
+                'header, e.g. "email+ticket=Contact"; without it the '
+                "header is made up of the fields' own names; use \\n in "
+                "the title for a line break. Static fields: %s. "
+                'Questions: "question:<identifier>".'
+            )
+            % ", ".join(tokens),
+        )
 
         return OrderedDict(
             [
@@ -260,18 +277,7 @@ class AttendeeListPDFExporter(ReportlabExportMixin, BaseExporter):
                         required=False,
                         initial=self.event.settings.get(CUSTOM_COLUMNS_SETTING) or "",
                         validators=[self._spec_validator(parse_column_spec)],
-                        help_text=_(
-                            'Only used for the kind "Custom list". '
-                            "One column per line, in the order they "
-                            "should appear in the PDF. Combine two or more fields "
-                            'into a single stacked column by joining them with "+", '
-                            'e.g. "email+ticket". Append "=Title" to set the column '
-                            'header, e.g. "email+ticket=Contact"; without it the '
-                            "header is made up of the fields' own names; use \\n in "
-                            "the title for a line break. Static fields: %s. "
-                            'Questions: "question:<identifier>".'
-                        )
-                        % ", ".join(tokens),
+                        help_text=columns_help,
                     ),
                 ),
                 (
