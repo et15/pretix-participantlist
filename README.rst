@@ -35,6 +35,45 @@ Features
 
 The plugin is activated for the organizer and then available in all its events.
 
+Screenshots
+-----------
+
+All names, addresses and phone numbers are made up.
+
+**Generated PDF**: a list kind with stacked columns, pending orders included and
+the "confidential" footer, and a sign-in sheet with a signature column.
+
+.. image:: https://raw.githubusercontent.com/et15/pretix-participantlist/main/docs/screenshots/pdf-leaders.png
+   :alt: Generated PDF participant list with logo, header text and a confidential footer
+
+.. image:: https://raw.githubusercontent.com/et15/pretix-participantlist/main/docs/screenshots/pdf-signin.png
+   :alt: Generated PDF sign-in sheet with a signature column
+
+**List kinds** (organizer settings): the default kind is marked with a star.
+
+.. image:: https://raw.githubusercontent.com/et15/pretix-participantlist/main/docs/screenshots/kinds.png
+   :alt: List of configured list kinds
+
+.. image:: https://raw.githubusercontent.com/et15/pretix-participantlist/main/docs/screenshots/kind-edit.png
+   :alt: Form to edit a list kind with columns, sort order and options
+
+**Export page** of an event: pick a list kind, or copy one into the custom list
+and adjust it for this event.
+
+.. image:: https://raw.githubusercontent.com/et15/pretix-participantlist/main/docs/screenshots/export.png
+   :alt: Event export page for the PDF participant list with the custom list fields
+
+**Branding** (organizer settings): logo, header text, filename prefix and the
+birth date question used for the age column.
+
+.. image:: https://raw.githubusercontent.com/et15/pretix-participantlist/main/docs/screenshots/branding.png
+   :alt: Branding settings form
+
+**CSV/XLSX export** across multiple events (organizer export page).
+
+.. image:: https://raw.githubusercontent.com/et15/pretix-participantlist/main/docs/screenshots/export-csv.png
+   :alt: Organizer export page for the multi-event CSV/XLSX participant list
+
 Development setup
 -----------------
 
