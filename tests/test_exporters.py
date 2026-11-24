@@ -1231,3 +1231,33 @@ def test_csv_exporter_lists_only_personalized_admission_tickets(event, position)
     rows = list(_csv_exporter(event).iterate_list({"fields": ["name", "ticket"]}))
 
     assert rows == [["Name", "Ticket type"], ["Jane Doe", "Ticket"]]
+
+
+def _pdf_text_fonts(data):
+    """(text, font resource name) pairs drawn on the first page."""
+    page = pypdf.PdfReader(BytesIO(data)).pages[0]
+    drawn = []
+
+    def visitor(text, _cm, _tm, font_dict, _size):
+        if text.strip() and font_dict is not None:
+            drawn.append((text.strip(), str(font_dict["/BaseFont"])))
+
+    page.extract_text(visitor_text=visitor)
+    return drawn
+
+
+def test_pdf_exporter_prints_event_title_bold_and_date_regular(event, position):
+    kind = ListConfiguration.objects.create(
+        organizer=event.organizer, name="Kurz", default_fields=[["name"]]
+    )
+    _filename, _type, data = AttendeeListPDFExporter(
+        event=event, organizer=event.organizer
+    ).render({"list": str(kind.pk)})
+
+    drawn = _pdf_text_fonts(data)
+    title_fonts = {font for text, font in drawn if text == "Testcamp"}
+    date_fonts = {
+        font for text, font in drawn if text == event.get_date_range_display()
+    }
+    assert title_fonts and all(f.endswith("-Bold") for f in title_fonts)
+    assert date_fonts and not any(f.endswith("-Bold") for f in date_fonts)

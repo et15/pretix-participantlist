@@ -713,15 +713,16 @@ class AttendeeListPDFExporter(ReportlabExportMixin, BaseExporter):
             self.pagesize[0] - doc.leftMargin - doc.rightMargin - reserved_width
         )
 
-        # Above the rule: the event name and date range, as before.
-        canvas.setFont(font_name, HEADER_FONT_SIZE)
+        # Above the rule: the event name (bold) and the date range.
+        canvas.setFont(bold_font_name, HEADER_FONT_SIZE)
         canvas.drawString(
             doc.leftMargin,
             self.pagesize[1] - HEADER_LINE1_Y,
             self._fit_text(
-                str(self.event.name), font_name, HEADER_FONT_SIZE, text_max_width
+                str(self.event.name), bold_font_name, HEADER_FONT_SIZE, text_max_width
             ),
         )
+        canvas.setFont(font_name, HEADER_FONT_SIZE)
         canvas.drawString(
             doc.leftMargin,
             self.pagesize[1] - HEADER_LINE2_Y,
