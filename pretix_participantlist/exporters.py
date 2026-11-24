@@ -813,13 +813,25 @@ class AttendeeListCSVExporter(ListExporter):
     )
 
     CSV_FIELD_CHOICES: ClassVar = [c for c in STATIC_FIELD_CHOICES if c[0] != "signing"]
+    #: The position's event, to tell apart rows of the exported events.
+    EVENT_FIELD_CHOICES: ClassVar = [
+        ("event_slug", _("Event slug")),
+        ("event_name", _("Event name")),
+    ]
     #: Per-position data that only the multi-event export offers.
     CHECKIN_FIELD_CHOICES: ClassVar = [
         ("last_checkin", _("Last check-in")),
     ]
     #: Fields that need the positions' check-ins loaded.
     CHECKIN_KEYS: ClassVar = {"checked_in", "last_checkin"}
-    DEFAULT_CSV_FIELDS: ClassVar = ["name", "email", "order_code", "ticket"]
+    DEFAULT_CSV_FIELDS: ClassVar = [
+        "event_slug",
+        "event_name",
+        "name",
+        "email",
+        "order_code",
+        "ticket",
+    ]
 
     def _question_choices(self):
         """One (token, label) choice per question identifier on the events.
@@ -847,7 +859,8 @@ class AttendeeListCSVExporter(ListExporter):
                     "fields",
                     forms.MultipleChoiceField(
                         label=_("Fields"),
-                        choices=self.CSV_FIELD_CHOICES
+                        choices=self.EVENT_FIELD_CHOICES
+                        + self.CSV_FIELD_CHOICES
                         + self.CHECKIN_FIELD_CHOICES
                         + self._question_choices(),
                         initial=self.DEFAULT_CSV_FIELDS,
@@ -913,9 +926,8 @@ class AttendeeListCSVExporter(ListExporter):
             return question_labels.get(identifier, identifier)
         if key == "index":
             return "index"
-        return str(
-            dict(self.CHECKIN_FIELD_CHOICES).get(key) or STATIC_FIELD_LABELS[key]
-        )
+        extra_labels = dict(self.EVENT_FIELD_CHOICES + self.CHECKIN_FIELD_CHOICES)
+        return str(extra_labels.get(key) or STATIC_FIELD_LABELS[key])
 
     @staticmethod
     def _last_checkin(position):
@@ -967,6 +979,11 @@ class AttendeeListCSVExporter(ListExporter):
             for key in fields:
                 if key.startswith(QUESTION_TOKEN_PREFIX):
                     row.append(answers.get(key[len(QUESTION_TOKEN_PREFIX) :], ""))
+                elif key == "event_slug":
+                    row.append(position.order.event.slug)
+                elif key == "event_name":
+                    # Localized to the export's language.
+                    row.append(str(position.order.event.name))
                 elif key == "last_checkin":
                     row.append(self._last_checkin(position))
                 else:

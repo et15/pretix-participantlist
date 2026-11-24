@@ -26,8 +26,10 @@ Features
   with an identifier (``question:<identifier>``). The age is computed from the organizer-wide
   birth date question.
 - **Branding**: logo and header text of the PDF, configured per organizer.
-- **CSV/XLSX export** across multiple events, optionally limited to
-  participants who have checked in (a successful entry on any check-in list).
+- **CSV/XLSX export** across multiple events, with the event (slug and name) of
+  each participant and the last check-in time as extra fields, optionally
+  limited to participants who have checked in (a successful entry on any
+  check-in list).
 
 The plugin is activated for the organizer and then available in all its events.
 

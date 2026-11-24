@@ -517,3 +517,11 @@ msgid ""
 msgstr ""
 "Eine Teilnehmendenliste wurde für diese Veranstaltungen exportiert "
 "(CSV/Excel): {events}."
+
+#: pretix_participantlist/exporters.py
+msgid "Event slug"
+msgstr "Kurzname der Veranstaltung"
+
+#: pretix_participantlist/exporters.py
+msgid "Event name"
+msgstr "Veranstaltungstitel"

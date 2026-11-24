@@ -1155,3 +1155,44 @@ def test_custom_list_is_not_saved_when_save_is_unticked(event, position):
     assert not event.settings.get(CUSTOM_COLUMNS_SETTING)
     assert not event.settings.get(CUSTOM_SORT_SETTING)
     assert not event.settings.get(CUSTOM_INCLUDE_PENDING_SETTING, as_type=bool)
+
+
+def test_csv_exporter_offers_event_fields_first_and_by_default(event, position):
+    field = _csv_exporter(event).additional_form_fields["fields"]
+    keys = [key for key, _label in field.choices]
+
+    assert keys[:2] == ["event_slug", "event_name"]
+    assert dict(field.choices)["event_slug"] == "Event slug"
+    assert dict(field.choices)["event_name"] == "Event name"
+    assert field.initial[:2] == ["event_slug", "event_name"]
+
+
+def test_csv_exporter_lists_event_of_each_row(event, item, position):
+    other = Event.objects.create(
+        organizer=event.organizer,
+        name="Wintercamp",
+        slug="wintercamp",
+        date_from=event.date_from + datetime.timedelta(days=30),
+        live=True,
+    )
+    other_item = other.items.create(name="Ticket", default_price=10)
+    _make_position(other, other_item, "WIN01", "Winnie Frost")
+    exporter = AttendeeListCSVExporter(
+        event=Event.objects.filter(pk__in=[event.pk, other.pk]),
+        organizer=event.organizer,
+    )
+
+    rows = list(exporter.iterate_list({"fields": ["event_slug", "event_name", "name"]}))
+
+    assert rows == [
+        ["Event slug", "Event name", "Name"],
+        ["testcamp", "Testcamp", "Jane Doe"],
+        ["wintercamp", "Wintercamp", "Winnie Frost"],
+    ]
+
+
+def test_csv_exporter_default_fields_include_event(event, position):
+    rows = list(_csv_exporter(event).iterate_list({}))
+
+    assert rows[0][:2] == ["Event slug", "Event name"]
+    assert rows[1][:2] == ["testcamp", "Testcamp"]
