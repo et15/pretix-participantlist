@@ -286,6 +286,7 @@ def test_csv_export_is_logged_on_organizer(event, position, user):
         "events": [event.slug],
         "fields": ["name"],
         "include_pending": False,
+        "checked_in_only": False,
         "format": "default",
     }
     assert str(entry.display()) == (

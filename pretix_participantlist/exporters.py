@@ -910,6 +910,7 @@ class AttendeeListCSVExporter(ListExporter):
             "events": [e.slug for e in self.events],
             "fields": list(form_data.get("fields") or self.DEFAULT_CSV_FIELDS),
             "include_pending": bool(form_data.get("include_pending")),
+            "checked_in_only": bool(form_data.get("checked_in_only")),
             "format": form_data.get("_format"),
         }
         # Multi-event exports belong to the organizer log (no single event).
