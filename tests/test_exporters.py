@@ -10,7 +10,14 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.files.base import ContentFile
 from django.utils.timezone import now
-from pretix.base.models import Event, Order, OrderPosition, Question, QuestionAnswer
+from pretix.base.models import (
+    Event,
+    Item,
+    Order,
+    OrderPosition,
+    Question,
+    QuestionAnswer,
+)
 from reportlab.lib.units import mm
 
 from pretix_participantlist.exporters import (
@@ -630,8 +637,6 @@ def test_csv_exporter_iterate_list_age(event, position):
 
 
 def _second_event(event, slug="camp2"):
-    from pretix.base.models import Item
-
     other = Event.objects.create(
         organizer=event.organizer,
         name="Second camp",
@@ -639,7 +644,9 @@ def _second_event(event, slug="camp2"):
         date_from=now() + datetime.timedelta(days=30),
         live=True,
     )
-    return other, Item.objects.create(event=other, name="Ticket", default_price=10)
+    return other, Item.objects.create(
+        event=other, name="Ticket", default_price=10, admission=True, personalized=True
+    )
 
 
 def test_csv_exporter_offers_questions_of_all_events(event, position):
@@ -1175,7 +1182,9 @@ def test_csv_exporter_lists_event_of_each_row(event, item, position):
         date_from=event.date_from + datetime.timedelta(days=30),
         live=True,
     )
-    other_item = other.items.create(name="Ticket", default_price=10)
+    other_item = other.items.create(
+        name="Ticket", default_price=10, admission=True, personalized=True
+    )
     _make_position(other, other_item, "WIN01", "Winnie Frost")
     exporter = AttendeeListCSVExporter(
         event=Event.objects.filter(pk__in=[event.pk, other.pk]),
@@ -1196,3 +1205,29 @@ def test_csv_exporter_default_fields_include_event(event, position):
 
     assert rows[0][:2] == ["Event slug", "Event name"]
     assert rows[1][:2] == ["testcamp", "Testcamp"]
+
+
+def _position_for_item(position, item, positionid):
+    return OrderPosition.objects.create(
+        order=position.order,
+        item=item,
+        price=5,
+        positionid=positionid,
+        attendee_name_parts={"_legacy": f"Extra {positionid}"},
+    )
+
+
+def test_csv_exporter_lists_only_personalized_admission_tickets(event, position):
+    extra = Item.objects.create(event=event, name="T-Shirt", default_price=5)
+    unpersonalized = Item.objects.create(
+        event=event, name="Day pass", default_price=5, admission=True
+    )
+    _position_for_item(position, extra, 2)
+    _position_for_item(position, unpersonalized, 3)
+    addon = _position_for_item(position, extra, 4)
+    addon.addon_to = position
+    addon.save()
+
+    rows = list(_csv_exporter(event).iterate_list({"fields": ["name", "ticket"]}))
+
+    assert rows == [["Name", "Ticket type"], ["Jane Doe", "Ticket"]]

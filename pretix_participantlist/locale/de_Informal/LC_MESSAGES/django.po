@@ -110,10 +110,13 @@ msgid "Participant list (CSV, multiple events)"
 msgstr "Teilnehmendenliste (CSV, mehrere Veranstaltungen)"
 
 #: pretix_participantlist/exporters.py
-msgid "Download attendees across multiple events as a single CSV/XLSX file."
+msgid ""
+"Download attendees across multiple events as a single CSV/XLSX file. Only "
+"personalized admission tickets are listed, no add-ons or extras."
 msgstr ""
 "Lade die Teilnehmenden mehrerer Veranstaltungen als eine CSV-/XLSX-Datei "
-"herunter."
+"herunter. Es werden nur personalisierte Zutrittsprodukte aufgeführt, keine "
+"Zusatzprodukte oder Extras."
 
 #: pretix_participantlist/exporters.py
 msgid "Fields"

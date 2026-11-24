@@ -28,7 +28,9 @@ def event(organizer):
 
 @pytest.fixture
 def item(event):
-    return Item.objects.create(event=event, name="Ticket", default_price=10)
+    return Item.objects.create(
+        event=event, name="Ticket", default_price=10, admission=True, personalized=True
+    )
 
 
 @pytest.fixture

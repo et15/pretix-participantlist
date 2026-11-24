@@ -809,7 +809,8 @@ class AttendeeListCSVExporter(ListExporter):
     verbose_name = _("Participant list (CSV, multiple events)")
     category = pgettext_lazy("export_category", "Participant list")
     description = _(
-        "Download attendees across multiple events as a single CSV/XLSX file."
+        "Download attendees across multiple events as a single CSV/XLSX file. "
+        "Only personalized admission tickets are listed, no add-ons or extras."
     )
 
     CSV_FIELD_CHOICES: ClassVar = [c for c in STATIC_FIELD_CHOICES if c[0] != "signing"]
@@ -953,6 +954,10 @@ class AttendeeListCSVExporter(ListExporter):
                 order__status__in=_listed_order_statuses(
                     bool(form_data.get("include_pending"))
                 ),
+                # One row per participant: skip extras (e.g. add-ons, merch)
+                # and non-personalized tickets.
+                item__admission=True,
+                item__personalized=True,
             )
             .select_related(
                 "order", "item", "variation", "order__invoice_address", "order__event"
