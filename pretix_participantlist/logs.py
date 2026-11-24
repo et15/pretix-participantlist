@@ -15,11 +15,7 @@ from pretix.base.logentrytypes import (
     log_entry_types,
 )
 from pretix.base.models import User
-
-try:
-    from pretix.base.models.auth import UserWithStaffSession
-except ImportError:  # pretix < 2026.4
-    UserWithStaffSession = None
+from pretix.base.models.auth import UserWithStaffSession
 
 from .models import ListConfiguration, OrganizerBranding
 
@@ -63,13 +59,12 @@ def changes(before, after):
 def actor_kwargs(permission_holder):
     """``log_action`` keyword arguments naming who ran an export.
 
-    ``permission_holder`` is set on exporters by pretix 2026.4.0 and newer
-    (a user, a staff-session wrapper, an API token or a device). Older
-    versions don't tell the exporter, so the entry is logged without actor.
+    ``permission_holder`` is the exporter's user, staff-session wrapper,
+    API token or device; ``None`` logs the entry without actor.
     """
     if permission_holder is None:
         return {}
-    if UserWithStaffSession and isinstance(permission_holder, UserWithStaffSession):
+    if isinstance(permission_holder, UserWithStaffSession):
         return {"user": permission_holder.user}
     if isinstance(permission_holder, User):
         return {"user": permission_holder}

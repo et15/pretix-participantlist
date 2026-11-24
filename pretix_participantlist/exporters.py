@@ -347,7 +347,7 @@ class AttendeeListPDFExporter(ReportlabExportMixin, BaseExporter):
         self.event.log_action(
             logs.EXPORT_PDF,
             data=data,
-            **logs.actor_kwargs(getattr(self, "permission_holder", None)),
+            **logs.actor_kwargs(self.permission_holder),
         )
 
     def _custom_kind(self, form_data, organizer):
@@ -386,7 +386,7 @@ class AttendeeListPDFExporter(ReportlabExportMixin, BaseExporter):
             self.event.log_action(
                 logs.CUSTOM_LIST_CHANGED,
                 data=changed,
-                **logs.actor_kwargs(getattr(self, "permission_holder", None)),
+                **logs.actor_kwargs(self.permission_holder),
             )
 
     def _resolve_kind(self, form_data, organizer):
@@ -867,7 +867,7 @@ class AttendeeListCSVExporter(ListExporter):
         target.log_action(
             logs.EXPORT_CSV,
             data=data,
-            **logs.actor_kwargs(getattr(self, "permission_holder", None)),
+            **logs.actor_kwargs(self.permission_holder),
         )
 
     def _csv_header(self, key, question_labels):
