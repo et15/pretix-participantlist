@@ -2,10 +2,12 @@ import datetime
 from collections import namedtuple
 
 from django.core.exceptions import ObjectDoesNotExist
-from django.db.models import Prefetch
+from django.db.models import Exists, OuterRef, Prefetch
 from django.utils.translation import gettext_lazy as _
 from django.utils.translation import pgettext_lazy
-from pretix.base.models import Checkin, Question
+from pretix.base.models import Checkin, CheckinList, Event_SettingsStore, Question
+
+from .settings import CHECKIN_LIST_KEY
 
 # pretix' own catalog translates a plain "Signature" as "Signatur", which would
 # win over ours; the message context keeps our "Unterschrift" effective.
@@ -343,6 +345,46 @@ def _ticket_name(position):
 ENTRY_CHECKINS_ATTR = "entry_checkins"
 
 
+def event_checkin_list(event):
+    """The check-in list that counts for "checked in" in this event, or ``None``.
+
+    ``None`` means entries on any check-in list count. The list is chosen on
+    the PDF export page (setting ``CHECKIN_LIST_KEY``); a list deleted since
+    falls back to any list.
+    """
+    value = event.settings.get(CHECKIN_LIST_KEY, as_type=str) or ""
+    if not value.isdigit():
+        return None
+    return event.checkin_lists.filter(pk=value).first()
+
+
+def events_checkin_list_ids(events):
+    """``{event id: check-in list id or None}``, as ``event_checkin_list`` per event.
+
+    For multi-event exports: two queries for any number of events, instead of
+    loading the settings of each event.
+    """
+    event_ids = [e.pk for e in events]
+    stored = {
+        event_id: int(value)
+        for event_id, value in Event_SettingsStore.objects.filter(
+            object_id__in=event_ids, key=CHECKIN_LIST_KEY
+        ).values_list("object_id", "value")
+        if value.isdigit()
+    }
+    existing = set(
+        CheckinList.objects.filter(
+            pk__in=stored.values(), event_id__in=stored.keys()
+        ).values_list("event_id", "pk")
+    )
+    return {
+        event_id: stored[event_id]
+        if (event_id, stored.get(event_id)) in existing
+        else None
+        for event_id in event_ids
+    }
+
+
 def entry_checkins_prefetch():
     """Prefetch of a position's successful entry check-ins on any list."""
     return Prefetch(
@@ -352,20 +394,40 @@ def entry_checkins_prefetch():
     )
 
 
-def entry_checkins(position):
-    """Successful entry check-ins of the position, on any check-in list.
+def entry_checkins(position, checkin_list_id=None):
+    """Successful entry check-ins of the position.
 
-    Uses ``entry_checkins_prefetch`` where the caller set it up, else queries.
+    Only those on the check-in list ``checkin_list_id``, or on any list if it
+    is ``None``. Uses ``entry_checkins_prefetch`` where the caller set it up,
+    else queries.
     """
     prefetched = getattr(position, ENTRY_CHECKINS_ATTR, None)
-    if prefetched is not None:
+    if prefetched is None:
+        prefetched = list(
+            position.all_checkins.filter(successful=True, type=Checkin.TYPE_ENTRY)
+        )
+    if checkin_list_id is None:
         return prefetched
-    return list(position.all_checkins.filter(successful=True, type=Checkin.TYPE_ENTRY))
+    return [c for c in prefetched if c.list_id == checkin_list_id]
 
 
-def _checked_in(position):
+def entry_checkins_exist(checkin_list_id=None, position_ref="pk"):
+    """``Exists`` expression: the position (``position_ref`` in the outer query)
+    has a successful entry check-in, on ``checkin_list_id`` or any list.
+
+    The database counterpart of ``bool(entry_checkins(...))``.
+    """
+    qs = Checkin.objects.filter(
+        position=OuterRef(position_ref), successful=True, type=Checkin.TYPE_ENTRY
+    )
+    if checkin_list_id is not None:
+        qs = qs.filter(list_id=checkin_list_id)
+    return Exists(qs)
+
+
+def _checked_in(position, checkin_list_id=None):
     """Yes/No: any successful entry, even if the person has left again since."""
-    return str(_("Yes") if entry_checkins(position) else _("No"))
+    return str(_("Yes") if entry_checkins(position, checkin_list_id) else _("No"))
 
 
 def birth_date_question_identifier(organizer):
@@ -376,24 +438,46 @@ def birth_date_question_identifier(organizer):
     return branding.birth_date_question if branding else ""
 
 
+def event_birth_date_question(event):
+    """The event's date question with the organizer's birth date identifier.
+
+    ``None`` if the identifier is not configured or the event has no date
+    question with it.
+    """
+    identifier = birth_date_question_identifier(event.organizer)
+    if not identifier:
+        return None
+    return event.questions.filter(
+        identifier=identifier, type=Question.TYPE_DATE
+    ).first()
+
+
+def parse_birth_date(value):
+    """The date of an answer to a date question (stored as ISO date), or None."""
+    try:
+        return datetime.date.fromisoformat(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def age_on(birth_date, day):
+    """Age in full years on ``day`` of someone born on ``birth_date``."""
+    had_birthday = (day.month, day.day) >= (birth_date.month, birth_date.day)
+    return day.year - birth_date.year - (0 if had_birthday else 1)
+
+
 def _birth_date(position, identifier):
     if not identifier:
         return None
     for answer in position.answers.all():
-        if answer.question.identifier != identifier:
-            continue
-        try:
-            return datetime.date.fromisoformat(answer.answer)
-        except ValueError:
-            return None
+        if answer.question.identifier == identifier:
+            return parse_birth_date(answer.answer)
     return None
 
 
-def _event_start_date(position):
-    event = position.order.event
-    if position.subevent_id:
-        return position.subevent.date_from.astimezone(event.timezone).date()
-    return event.date_from.astimezone(event.timezone).date()
+def event_start_date(event, subevent=None):
+    """First day of the event (or of the subevent), in the event's time zone."""
+    return (subevent or event).date_from.astimezone(event.timezone).date()
 
 
 def _attendee_age(position, birth_date_identifier):
@@ -405,14 +489,17 @@ def _attendee_age(position, birth_date_identifier):
     birth_date = _birth_date(position, birth_date_identifier)
     if not birth_date:
         return ""
-    start = _event_start_date(position)
-    age = start.year - birth_date.year
-    if (start.month, start.day) < (birth_date.month, birth_date.day):
-        age -= 1
-    return age
+    return age_on(
+        birth_date,
+        event_start_date(
+            position.order.event, position.subevent if position.subevent_id else None
+        ),
+    )
 
 
-def extract_static_field(position, key, index=None, birth_date_identifier=""):
+def extract_static_field(
+    position, key, index=None, birth_date_identifier="", checkin_list_id=None
+):
     if key == "index":
         return index if index is not None else ""
     if key == "name":
@@ -430,7 +517,7 @@ def extract_static_field(position, key, index=None, birth_date_identifier=""):
     if key == "status":
         return str(position.order.get_status_display())
     if key == "checked_in":
-        return _checked_in(position)
+        return _checked_in(position, checkin_list_id)
     if key == "ticket":
         return _ticket_name(position)
     if key == "company":

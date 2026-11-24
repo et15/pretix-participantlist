@@ -1,0 +1,34 @@
+{% extends "pretixcontrol/event/base.html" %}
+{% load i18n %}
+{% load static %}
+{% block title %}{% trans "Orders by attendee" %}{% endblock %}
+{% block content %}
+    <h1>{% trans "Orders by attendee" %}</h1>
+    <form id="participantlist-orders-filter" class="form-inline helper-display-inline" action="" method="get">
+        {% if request.GET.ordering %}
+            <input type="hidden" name="ordering" value="{{ request.GET.ordering }}">
+        {% endif %}
+        <div class="form-group">
+            <select name="status" class="form-control" aria-label="{% trans "Order status" %}">
+                {% for value, label in status_choices %}
+                    <option value="{{ value }}"{% if value == status %} selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="input-group">
+            <input type="search" name="query" value="{{ query }}" class="form-control" size="32"
+                   placeholder="{% trans "Order code, name or email" %}"
+                   aria-label="{% trans "Order code, name or email" %}">
+            <span class="input-group-btn">
+                <button class="btn btn-primary" type="submit">
+                    <span class="fa fa-search" aria-hidden="true"></span>
+                    {% trans "Search" %}
+                </button>
+            </span>
+        </div>
+    </form>
+    <div id="participantlist-orders-results">
+        {% include "pretix_participantlist/orderlist/fragment_results.html" %}
+    </div>
+    <script src="{% static "pretix_participantlist/orderlist.js" %}"></script>
+{% endblock %}

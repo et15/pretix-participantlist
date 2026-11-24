@@ -152,6 +152,7 @@ def test_export_form_has_custom_list_choice_and_no_checkbox_fields(event):
 
     assert list(form_fields) == [
         "list",
+        "checkin_list",
         "custom_name",
         "custom_columns",
         "custom_sort",
@@ -835,7 +836,8 @@ def test_csv_exporter_checkin_fields_not_loaded_when_unused(
     with django_assert_num_queries(4):
         list(exporter.iterate_list({"fields": ["name"]}))
     exporter = _csv_exporter(event)
-    with django_assert_num_queries(5):
+    # + events, their saved check-in lists (one query for all events), check-ins
+    with django_assert_num_queries(7):
         list(exporter.iterate_list({"fields": ["name", "checked_in"]}))
 
 

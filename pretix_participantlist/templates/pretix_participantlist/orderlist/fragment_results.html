@@ -1,0 +1,112 @@
+{% load i18n %}
+{% if orders %}
+    <div class="table-responsive">
+        <table class="table table-condensed table-hover table-orders">
+            <thead>
+            <tr>
+                <th>{% trans "Order code" %}
+                    {% include "pretix_participantlist/orderlist/fragment_sort.html" with key="code" %}
+                </th>
+                <th>{% trans "Attendee" %}
+                    {% include "pretix_participantlist/orderlist/fragment_sort.html" with key="attendee" %}
+                </th>
+                {% if show_datetime %}
+                    <th>{% trans "Order date" %}
+                        {% include "pretix_participantlist/orderlist/fragment_sort.html" with key="datetime" %}
+                    </th>
+                {% endif %}
+                {% if show_payment %}
+                    <th>{% trans "Payment method" %}</th>
+                {% endif %}
+                {% for q in questions %}
+                    <th>{{ q.question }}
+                        {% include "pretix_participantlist/orderlist/fragment_sort.html" with key=q.sort_key %}
+                    </th>
+                {% endfor %}
+                {% if age_question %}
+                    <th>{% trans "Age" %}
+                        {% include "pretix_participantlist/orderlist/fragment_sort.html" with key="age" %}
+                    </th>
+                {% endif %}
+                {% if checkin_list %}
+                    <th>{% trans "Check-in" %}
+                        {% include "pretix_participantlist/orderlist/fragment_sort.html" with key="checkin" %}
+                        {% if not checkin_list_any %}<br><small class="text-muted">{{ checkin_list.name }}</small>{% endif %}
+                    </th>
+                {% endif %}
+                <th class="text-right flip">{% trans "Status" %}
+                    {% include "pretix_participantlist/orderlist/fragment_sort.html" with key="status" %}
+                </th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for o in orders %}
+                <tr>
+                    <td>
+                        <strong>
+                            <a href="{% url "control:event.order" event=request.event.slug organizer=request.event.organizer.slug code=o.code %}">{{ o.code }}</a>
+                        </strong>
+                        {% if o.testmode %}
+                            <span class="label label-warning">{% trans "TEST MODE" %}</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if o.attendee_names %}
+                            {% for name in o.attendee_names %}{{ name }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+                            {% if o.name_source == "customer" %}
+                                <span class="fa fa-user text-muted" data-toggle="tooltip"
+                                      title="{% trans "Name from customer account" %}"></span>
+                                <span class="sr-only">({% trans "Name from customer account" %})</span>
+                            {% elif o.name_source == "invoice" %}
+                                <span class="fa fa-file-text-o text-muted" data-toggle="tooltip"
+                                      title="{% trans "Name from invoice address" %}"></span>
+                                <span class="sr-only">({% trans "Name from invoice address" %})</span>
+                            {% endif %}
+                        {% else %}
+                            <span class="text-muted">&ndash;</span>
+                        {% endif %}
+                    </td>
+                    {% if show_datetime %}
+                        <td>{{ o.datetime|date:"SHORT_DATETIME_FORMAT" }}</td>
+                    {% endif %}
+                    {% if show_payment %}
+                        <td>
+                            {% for m in o.payment_methods %}{{ m }}{% if not forloop.last %}<br>{% endif %}{% empty %}<span class="text-muted">&ndash;</span>{% endfor %}
+                        </td>
+                    {% endif %}
+                    {% for values in o.question_values %}
+                        <td>{% for v in values %}{{ v }}{% if not forloop.last %}<br>{% endif %}{% empty %}<span class="text-muted">&ndash;</span>{% endfor %}</td>
+                    {% endfor %}
+                    {% if age_question %}
+                        <td>{% for age in o.ages %}{{ age }}{% if not forloop.last %}<br>{% endif %}{% empty %}<span class="text-muted">&ndash;</span>{% endfor %}</td>
+                    {% endif %}
+                    {% if checkin_list %}
+                        <td>
+                            {% if o.checkins_total == 0 %}
+                                <span class="text-muted">&ndash;</span>
+                            {% elif o.checkins_total == 1 %}
+                                {% if o.checkins_entered %}
+                                    <span class="fa fa-check text-success" aria-hidden="true" data-toggle="tooltip" title="{% trans "Checked in" %}"></span>
+                                    <span class="sr-only">{% trans "Checked in" %}</span>
+                                {% else %}
+                                    <span class="text-muted" aria-hidden="true" data-toggle="tooltip" title="{% trans "Not checked in" %}">&ndash;</span>
+                                    <span class="sr-only">{% trans "Not checked in" %}</span>
+                                {% endif %}
+                            {% else %}
+                                <span class="{% if o.checkins_entered %}text-success{% else %}text-muted{% endif %}" data-toggle="tooltip" title="{% trans "Checked in" %}">
+                                    {% if o.checkins_entered %}<span class="fa fa-check" aria-hidden="true"></span>{% endif %}
+                                    {{ o.checkins_entered }} / {{ o.checkins_total }}
+                                </span>
+                            {% endif %}
+                        </td>
+                    {% endif %}
+                    <td class="text-right flip">{% include "pretixcontrol/orders/fragment_order_status.html" with order=o %}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% include "pretixcontrol/pagination.html" %}
+{% else %}
+    <p class="text-muted">{% trans "No orders found." %}</p>
+{% endif %}

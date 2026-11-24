@@ -1,0 +1,4 @@
+{% load i18n %}{% load urlreplace %}{% with "-"|add:key as desc %}
+<a href="?{% url_replace request 'ordering' desc %}" title="{% trans "Sort descending" %}" aria-label="{% trans "Sort descending" %}"><i class="fa fa-caret-down" aria-hidden="true"></i></a>
+<a href="?{% url_replace request 'ordering' key %}" title="{% trans "Sort ascending" %}" aria-label="{% trans "Sort ascending" %}"><i class="fa fa-caret-up" aria-hidden="true"></i></a>
+{% endwith %}

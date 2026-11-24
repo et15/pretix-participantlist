@@ -26,6 +26,7 @@ KIND_CHANGED = f"{PREFIX}.kind.changed"
 KIND_DELETED = f"{PREFIX}.kind.deleted"
 KIND_DEFAULT = f"{PREFIX}.kind.default"
 CUSTOM_LIST_CHANGED = f"{PREFIX}.custom_list.changed"
+CHECKIN_LIST_CHANGED = f"{PREFIX}.checkin_list.changed"
 EXPORT_PDF = f"{PREFIX}.export.pdf"
 EXPORT_CSV = f"{PREFIX}.export.csv"
 
@@ -160,6 +161,18 @@ class KindDefaultLogEntryType(KindLogEntryType):
     }
 )
 class CustomListLogEntryType(NoOpShredderMixin, EventLogEntryType):
+    pass
+
+
+@log_entry_types.new_from_dict(
+    {
+        CHECKIN_LIST_CHANGED: _(
+            'The check-in list used for "checked in" in participant lists and the '
+            "order list of this event has been changed."
+        ),
+    }
+)
+class CheckinListLogEntryType(NoOpShredderMixin, EventLogEntryType):
     pass
 
 

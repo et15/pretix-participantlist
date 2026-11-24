@@ -1,6 +1,8 @@
 from django.urls import re_path
 
-from . import views
+from . import orderlist, views
+
+_EVENT_PREFIX = r"^control/event/(?P<organizer>[^/]+)/(?P<event>[^/]+)/participantlist/"
 
 urlpatterns = [
     re_path(
@@ -37,5 +39,15 @@ urlpatterns = [
         r"^control/organizer/(?P<organizer>[^/]+)/participantlist/kinds/(?P<kind>\d+)/default$",
         views.ListConfigurationSetDefaultView.as_view(),
         name="kinds.default",
+    ),
+    re_path(
+        _EVENT_PREFIX + r"orders/$",
+        orderlist.OrderListView.as_view(),
+        name="orders",
+    ),
+    re_path(
+        _EVENT_PREFIX + r"orders/settings/$",
+        orderlist.OrderListSettingsView.as_view(),
+        name="orders.settings",
     ),
 ]

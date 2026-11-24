@@ -1,7 +1,7 @@
 [project]
 name = "pretix-participantlist"
 dynamic = ["version"]
-description = "Exports attendees as customizable participant lists (PDF and CSV)"
+description = "Exports attendees as customizable participant lists (PDF and CSV) and lists the attendees of each order"
 readme = "README.rst"
 requires-python = ">=3.11"
 license = "Apache-2.0"

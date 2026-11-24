@@ -30,10 +30,68 @@ Features
   admission ticket (add-ons and other extras are left out), with the event
   (slug and name) of each participant and the last check-in time as extra
   fields, optionally
-  limited to participants who have checked in (a successful entry on any
-  check-in list).
+  limited to participants who have checked in.
+- **Check-in list**: "checked in" (PDF, CSV, order list) means at least one
+  successful entry, whether or not the person has left again since. The PDF
+  export page has a field to choose the check-in list that counts; the choice
+  is saved with the event and also used by the multi-event CSV export (for
+  each event its own saved list) and the order list. By default, entries on
+  any check-in list count. A list deleted since counts as "any list"; when an
+  event is copied, the copy uses its own copy of the list.
+- **Order list** (*Orders → Orders by attendee*, see below).
 
 The plugin is activated for the organizer and then available in all its events.
+
+Order list
+----------
+
+The page **Orders → Orders by attendee** in every event lists the orders like
+pretix' own order list, but shows the attendees of each order instead of the
+email address and the invoice name. It was previously the separate plugin
+pretix-ordersummary.
+
+Columns:
+
+- **Order code**, linked to the order.
+- **Attendee**: the attendee names of all tickets of the order, without
+  duplicates and without add-on products. Only if no ticket has a name, the
+  name of the linked customer account is used, and after that the name (or
+  company) of the invoice address. An icon marks these fallbacks.
+- **Order date** (optional, shown by default).
+- **Payment method** (optional, shown by default): the methods of all paid
+  payments (including payments refunded later), or, if nothing is paid yet,
+  the method of the newest open payment.
+- **Question columns** (optional): each cell shows the answers of all tickets
+  of the order (add-ons included), without duplicates. Questions asked once
+  per order are supported, too.
+- **Age** (optional): from the organizer-wide birth date question (see
+  *Branding*), the age on the first day of the event, or in an event series
+  on the date of the ticket, in the event's time zone. One age per attendee
+  (add-ons ignored); equal ages are not merged. Sorting by age sorts by date
+  of birth. Hidden if the event has no date question with that identifier.
+- **Check-in** (optional, check-in list as chosen on the PDF export page):
+  whether the attendees have ever entered. Exits, failed scans and add-on
+  products are not taken into account. With one attendee the cell shows a
+  check mark, with several attendees "entered / total", e.g. "1 / 2".
+- **Status**, as in pretix' order list.
+
+The optional columns are switched on under *Settings → Orders by attendee*.
+
+Canceled tickets are only used if all tickets of an order are canceled. The
+search box finds orders by order code, email, attendee, customer account or
+invoice name. The status filter hides canceled orders by default, including
+orders canceled with a paid fee; "Paid" does not include those.
+
+Filter, search, sort arrows and page navigation update only the table, without
+reloading the page (``static/pretix_participantlist/orderlist.js``). Without
+JavaScript, everything works as normal links and forms. All columns except the
+payment method can be sorted. Attendee and question columns sort by the first
+value shown, ignoring case; answers are sorted as text, so numbers sort like
+"10" before "9". The check-in column sorts by the number of attendees who have
+entered.
+
+Permissions: viewing the list needs the permission to view orders; its
+settings page needs the permission to change the general event settings.
 
 Screenshots
 -----------

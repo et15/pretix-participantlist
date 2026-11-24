@@ -6,7 +6,7 @@ from typing import ClassVar
 from xml.sax.saxutils import escape
 
 from django import forms
-from django.db.models import Exists, OuterRef
+from django.db.models import Q
 from django.utils.functional import cached_property
 from django.utils.html import format_html, format_html_join
 from django.utils.text import slugify
@@ -14,7 +14,7 @@ from django.utils.timezone import now
 from django.utils.translation import gettext_lazy as _
 from django.utils.translation import pgettext_lazy
 from pretix.base.exporter import BaseExporter, ListExporter
-from pretix.base.models import Checkin, Order, OrderPosition, Question
+from pretix.base.models import Order, OrderPosition, Question
 from pretix.plugins.reports.exporters import ReportlabExportMixin
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4, landscape
@@ -38,7 +38,10 @@ from .fields import (
     address_lines,
     birth_date_question_identifier,
     entry_checkins,
+    entry_checkins_exist,
     entry_checkins_prefetch,
+    event_checkin_list,
+    events_checkin_list_ids,
     extract_static_field,
     format_column_spec,
     format_sort_spec,
@@ -50,6 +53,7 @@ from .fields import (
     serialize_column_groups,
 )
 from .models import ListConfiguration, OrganizerBranding
+from .settings import CHECKIN_LIST_KEY
 
 ALL_KINDS_VALUE = "__all__"
 CUSTOM_KIND_VALUE = "__custom__"
@@ -57,6 +61,8 @@ CUSTOM_NAME_SETTING = "participantlist_custom_name"
 CUSTOM_COLUMNS_SETTING = "participantlist_custom_columns"
 CUSTOM_SORT_SETTING = "participantlist_custom_sort"
 CUSTOM_INCLUDE_PENDING_SETTING = "participantlist_custom_include_pending"
+#: Value of the check-in list field for "entries on any check-in list".
+ANY_CHECKIN_LIST_VALUE = ""
 STATIC_FIELD_LABELS = dict(STATIC_FIELD_CHOICES)
 DEFAULT_FILENAME_PREFIX = "Participant-List"
 FILENAME_UNSAFE_RE = re.compile(r'[\\/:*?"<>|]')
@@ -151,6 +157,10 @@ class AttendeeListPDFExporter(ReportlabExportMixin, BaseExporter):
         "organizer settings."
     )
 
+    #: Check-in list (ID) for the "checked in" field, ``None`` = any list. Set
+    #: from the form data in ``get_story``.
+    _checkin_list_id = None
+
     @cached_property
     def _birth_date_identifier(self):
         return birth_date_question_identifier(self.event.organizer)
@@ -208,6 +218,43 @@ class AttendeeListPDFExporter(ReportlabExportMixin, BaseExporter):
             ),
         )
 
+    def _checkin_list_choices(self):
+        return [(ANY_CHECKIN_LIST_VALUE, _("All check-in lists"))] + [
+            (str(cl.pk), str(cl.name))
+            for cl in self.event.checkin_lists.order_by("name", "pk")
+        ]
+
+    def _stored_checkin_list_value(self):
+        checkin_list = event_checkin_list(self.event)
+        return str(checkin_list.pk) if checkin_list else ANY_CHECKIN_LIST_VALUE
+
+    def _form_checkin_list_value(self, form_data):
+        """The check-in list value of the export, validated against the event.
+
+        Without the field (a scheduled export stored before it existed), the
+        event's saved choice is used. A list deleted since counts as any list.
+        """
+        if "checkin_list" not in form_data:
+            return self._stored_checkin_list_value()
+        value = str(form_data.get("checkin_list") or "")
+        if value.isdigit() and self.event.checkin_lists.filter(pk=value).exists():
+            return value
+        return ANY_CHECKIN_LIST_VALUE
+
+    def _save_checkin_list(self, form_data):
+        """Save the export's check-in list with the event, logging a change."""
+        if "checkin_list" not in form_data:
+            return
+        value = self._form_checkin_list_value(form_data)
+        if (self.event.settings.get(CHECKIN_LIST_KEY, as_type=str) or "") == value:
+            return
+        self.event.settings.set(CHECKIN_LIST_KEY, value)
+        self.event.log_action(
+            logs.CHECKIN_LIST_CHANGED,
+            data={CHECKIN_LIST_KEY: value},
+            **logs.actor_kwargs(self.permission_holder),
+        )
+
     @property
     def export_form_fields(self):
         kinds = list(ListConfiguration.objects.filter(organizer=self.event.organizer))
@@ -253,6 +300,21 @@ class AttendeeListPDFExporter(ReportlabExportMixin, BaseExporter):
                         if len(kind_choices) <= 5
                         else forms.Select,
                         help_text=self._adopt_kind_help(kinds),
+                    ),
+                ),
+                (
+                    "checkin_list",
+                    forms.ChoiceField(
+                        label=_("Check-in list"),
+                        choices=self._checkin_list_choices(),
+                        initial=self._stored_checkin_list_value(),
+                        required=False,
+                        help_text=_(
+                            'Entries on this list count as "checked in". The '
+                            "choice is saved with the event and also used by the "
+                            "multi-event CSV export and the order list "
+                            '("Orders by attendee").'
+                        ),
                     ),
                 ),
                 (
@@ -331,6 +393,7 @@ class AttendeeListPDFExporter(ReportlabExportMixin, BaseExporter):
 
     def render(self, form_data):
         self.form_data = form_data
+        self._save_checkin_list(form_data)
         kind_value = form_data.get("list") or ALL_KINDS_VALUE
         if kind_value == CUSTOM_KIND_VALUE:
             # Missing (e.g. scheduled exports stored before this option
@@ -360,6 +423,7 @@ class AttendeeListPDFExporter(ReportlabExportMixin, BaseExporter):
             "list": kind_value,
             "list_name": kind.name if kind and kind_value != ALL_KINDS_VALUE else None,
             "kinds": [{"id": k.pk, "name": k.name} for k in kinds],
+            "checkin_list": self._form_checkin_list_value(form_data),
         }
         if kind_value == CUSTOM_KIND_VALUE:
             data["custom"] = {
@@ -495,6 +559,8 @@ class AttendeeListPDFExporter(ReportlabExportMixin, BaseExporter):
         self._branding = branding
         kind = self._resolve_kind(form_data, organizer)
 
+        list_value = self._form_checkin_list_value(form_data)
+        self._checkin_list_id = int(list_value) if list_value else None
         self._confidential = bool(kind and kind.is_confidential)
         self._current_kind_name = kind.name if kind else None
 
@@ -561,7 +627,7 @@ class AttendeeListPDFExporter(ReportlabExportMixin, BaseExporter):
             if field == "checked_in":
                 # By the value, not the translated "Yes"/"No" text, so the
                 # order doesn't depend on the language: not checked in first.
-                return bool(entry_checkins(position))
+                return bool(entry_checkins(position, self._checkin_list_id))
             value = extract_static_field(
                 position, field, birth_date_identifier=self._birth_date_identifier
             )
@@ -634,7 +700,11 @@ class AttendeeListPDFExporter(ReportlabExportMixin, BaseExporter):
                 lines.extend(address_lines(position))
             elif key != "signing":
                 value = extract_static_field(
-                    position, key, index, self._birth_date_identifier
+                    position,
+                    key,
+                    index,
+                    self._birth_date_identifier,
+                    self._checkin_list_id,
                 )
                 if value != "":
                     lines.append(str(value))
@@ -896,8 +966,10 @@ class AttendeeListCSVExporter(ListExporter):
                         initial=False,
                         help_text=_(
                             "Only list participants with at least one successful "
-                            "entry on any check-in list of their event, whether "
-                            "or not they have left again since."
+                            "entry on the check-in list chosen on their event's "
+                            "participant list (PDF) export page, or on any list "
+                            "if none is chosen there, whether or not they have "
+                            "left again since."
                         ),
                     ),
                 ),
@@ -939,9 +1011,10 @@ class AttendeeListCSVExporter(ListExporter):
         return str(extra_labels.get(key) or STATIC_FIELD_LABELS[key])
 
     @staticmethod
-    def _last_checkin(position):
-        """Time of the position's last successful entry on any check-in list."""
-        entries = entry_checkins(position)
+    def _last_checkin(position, checkin_list_id=None):
+        """Time of the position's last successful entry on the check-in list
+        (``None``: on any list)."""
+        entries = entry_checkins(position, checkin_list_id)
         if not entries:
             return ""
         last = max(c.datetime for c in entries)
@@ -972,22 +1045,27 @@ class AttendeeListCSVExporter(ListExporter):
             .prefetch_related("answers", "answers__question")
             .order_by("order__event__date_from", "order__code", "positionid")
         )
+        # Each event uses the check-in list saved on its PDF export page.
+        checkin_list_ids = {}
+        if form_data.get("checked_in_only") or self.CHECKIN_KEYS.intersection(fields):
+            checkin_list_ids = events_checkin_list_ids(self.events)
         if form_data.get("checked_in_only"):
             # Same notion of "checked in" as the "Checked in" column.
-            qs = qs.filter(
-                Exists(
-                    Checkin.objects.filter(
-                        position=OuterRef("pk"),
-                        successful=True,
-                        type=Checkin.TYPE_ENTRY,
-                    )
+            by_list = {}
+            for event_id, list_id in checkin_list_ids.items():
+                by_list.setdefault(list_id, []).append(event_id)
+            condition = Q(pk__in=[])
+            for list_id, event_ids in by_list.items():
+                condition |= Q(order__event_id__in=event_ids) & Q(
+                    entry_checkins_exist(list_id)
                 )
-            )
+            qs = qs.filter(condition)
         if self.CHECKIN_KEYS.intersection(fields):
             qs = qs.prefetch_related(entry_checkins_prefetch())
         birth_date_identifier = birth_date_question_identifier(self.organizer)
         for index, position in enumerate(qs, start=1):
             answers = {a.question.identifier: str(a) for a in position.answers.all()}
+            checkin_list_id = checkin_list_ids.get(position.order.event_id)
             row = []
             for key in fields:
                 if key.startswith(QUESTION_TOKEN_PREFIX):
@@ -998,11 +1076,11 @@ class AttendeeListCSVExporter(ListExporter):
                     # Localized to the export's language.
                     row.append(str(position.order.event.name))
                 elif key == "last_checkin":
-                    row.append(self._last_checkin(position))
+                    row.append(self._last_checkin(position, checkin_list_id))
                 else:
                     row.append(
                         extract_static_field(
-                            position, key, index, birth_date_identifier
+                            position, key, index, birth_date_identifier, checkin_list_id
                         )
                     )
             yield row
