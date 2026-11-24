@@ -3,7 +3,7 @@ from django.db import transaction
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
-from django.views.generic import CreateView, DetailView, ListView, UpdateView
+from django.views.generic import CreateView, ListView, UpdateView, View
 from pretix.control.permissions import OrganizerPermissionRequiredMixin
 from pretix.control.views.organizer import OrganizerDetailViewMixin
 from pretix.helpers.compat import CompatDeleteView
@@ -199,14 +199,13 @@ class ListConfigurationDeleteView(
         return redirect(self.get_success_url())
 
 
-class ListConfigurationSetDefaultView(
-    OrganizerDetailViewMixin, OrganizerPermissionRequiredMixin, DetailView
-):
-    model = ListConfiguration
-    permission = PERMISSION
-    pk_url_kwarg = "kind"
+class ListConfigurationSetDefaultView(OrganizerPermissionRequiredMixin, View):
+    """Make a list kind the default. POST only; other methods get 405."""
 
-    def get_object(self, queryset=None):
+    permission = PERMISSION
+    http_method_names = ["post"]
+
+    def get_object(self):
         return get_object_or_404(
             ListConfiguration,
             organizer=self.request.organizer,

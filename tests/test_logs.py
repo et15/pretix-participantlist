@@ -133,6 +133,17 @@ def test_set_default_is_logged(admin_client, organizer, kind):
     assert len(_entries(logs.KIND_DEFAULT)) == 1
 
 
+def test_set_default_rejects_get(admin_client, organizer, kind):
+    other = ListConfiguration.objects.create(organizer=organizer, name="Lang")
+
+    response = admin_client.get(f"{BASE}/kinds/{other.pk}/default")
+
+    assert response.status_code == 405
+    other.refresh_from_db()
+    assert other.is_default is False
+    assert _entries(logs.KIND_DEFAULT) == []
+
+
 def test_branding_change_is_logged(admin_client, organizer, user):
     response = admin_client.post(
         f"{BASE}/branding/",
