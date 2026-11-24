@@ -6,7 +6,7 @@ try:
     from pretix.base.plugins import PLUGIN_LEVEL_ORGANIZER, PluginConfig
 except ImportError:
     raise RuntimeError(
-        "Please use pretix 2026.1.0 or above to run this plugin!",
+        "Please use pretix 2026.4.0 or above to run this plugin!",
     ) from None
 
 
@@ -24,10 +24,10 @@ class PluginApp(PluginConfig):
         visible = True
         version = __version__
         category = "FORMAT"
-        compatibility = "pretix>=2026.1.0"
+        compatibility = "pretix>=2026.4.0"
         level = PLUGIN_LEVEL_ORGANIZER
         settings_links = []
         navigation_links = []
 
     def ready(self):
-        from . import signals  # NOQA
+        from . import logs, signals  # NOQA

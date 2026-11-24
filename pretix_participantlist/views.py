@@ -1,12 +1,14 @@
 from django.contrib import messages
+from django.db import transaction
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
-from django.views.generic import CreateView, DetailView, ListView, UpdateView
+from django.views.generic import CreateView, ListView, UpdateView, View
 from pretix.control.permissions import OrganizerPermissionRequiredMixin
 from pretix.control.views.organizer import OrganizerDetailViewMixin
 from pretix.helpers.compat import CompatDeleteView
 
+from . import logs
 from .fields import STATIC_FIELD_CHOICES, organizer_question_details
 from .forms import BrandingForm, ListConfigurationForm
 from .models import ListConfiguration, OrganizerBranding
@@ -41,9 +43,20 @@ class BrandingUpdateView(
             kwargs={"organizer": self.request.organizer.slug},
         )
 
+    @transaction.atomic
     def form_valid(self, form):
+        fields = BrandingForm.Meta.fields
+        before = logs.snapshot(
+            OrganizerBranding.objects.get(pk=form.instance.pk), fields
+        )
         messages.success(self.request, _("Your changes have been saved."))
-        return super().form_valid(form)
+        response = super().form_valid(form)
+        changed = logs.changes(before, logs.snapshot(self.object, fields))
+        if changed:
+            self.object.log_action(
+                logs.BRANDING_CHANGED, user=self.request.user, data=changed
+            )
+        return response
 
 
 class ListConfigurationListView(
@@ -90,6 +103,7 @@ class ListConfigurationCreateView(
     def get_success_url(self):
         return _kinds_url(self.request.organizer)
 
+    @transaction.atomic
     def form_valid(self, form):
         form.instance.organizer = self.request.organizer
         if not self.request.organizer.participantlist_configs.filter(
@@ -97,7 +111,13 @@ class ListConfigurationCreateView(
         ).exists():
             form.instance.is_default = True
         messages.success(self.request, _("The list kind has been created."))
-        return super().form_valid(form)
+        response = super().form_valid(form)
+        self.object.log_action(
+            logs.KIND_ADDED,
+            user=self.request.user,
+            data=logs.snapshot(self.object, logs.KIND_LOG_FIELDS),
+        )
+        return response
 
 
 class ListConfigurationUpdateView(
@@ -124,9 +144,19 @@ class ListConfigurationUpdateView(
     def get_success_url(self):
         return _kinds_url(self.request.organizer)
 
+    @transaction.atomic
     def form_valid(self, form):
+        before = logs.snapshot(
+            ListConfiguration.objects.get(pk=form.instance.pk), logs.KIND_LOG_FIELDS
+        )
         messages.success(self.request, _("The list kind has been updated."))
-        return super().form_valid(form)
+        response = super().form_valid(form)
+        changed = logs.changes(before, logs.snapshot(self.object, logs.KIND_LOG_FIELDS))
+        if changed:
+            self.object.log_action(
+                logs.KIND_CHANGED, user=self.request.user, data=changed
+            )
+        return response
 
 
 class ListConfigurationDeleteView(
@@ -148,39 +178,58 @@ class ListConfigurationDeleteView(
     def get_success_url(self):
         return _kinds_url(self.request.organizer)
 
+    @transaction.atomic
     def delete(self, request, *args, **kwargs):
         self.object = self.get_object()
         was_default = self.object.is_default
+        deleted = {"id": self.object.pk, "name": self.object.name}
+        self.object.log_action(logs.KIND_DELETED, user=request.user, data=deleted)
         self.object.delete()
         if was_default:
             other = self.request.organizer.participantlist_configs.first()
             if other:
                 other.is_default = True
                 other.save(update_fields=["is_default"])
+                other.log_action(
+                    logs.KIND_DEFAULT,
+                    user=request.user,
+                    data={"automatic": True, "previous": deleted},
+                )
         messages.success(request, _("The list kind has been deleted."))
         return redirect(self.get_success_url())
 
 
-class ListConfigurationSetDefaultView(
-    OrganizerDetailViewMixin, OrganizerPermissionRequiredMixin, DetailView
-):
-    model = ListConfiguration
-    permission = PERMISSION
-    pk_url_kwarg = "kind"
+class ListConfigurationSetDefaultView(OrganizerPermissionRequiredMixin, View):
+    """Make a list kind the default. POST only; other methods get 405."""
 
-    def get_object(self, queryset=None):
+    permission = PERMISSION
+    http_method_names = ["post"]
+
+    def get_object(self):
         return get_object_or_404(
             ListConfiguration,
             organizer=self.request.organizer,
             pk=self.kwargs.get("kind"),
         )
 
+    @transaction.atomic
     def post(self, request, *args, **kwargs):
         obj = self.get_object()
-        self.request.organizer.participantlist_configs.exclude(pk=obj.pk).update(
-            is_default=False
-        )
-        obj.is_default = True
-        obj.save(update_fields=["is_default"])
+        others = self.request.organizer.participantlist_configs.exclude(pk=obj.pk)
+        previous = others.filter(is_default=True).first()
+        others.update(is_default=False)
+        if not obj.is_default:
+            obj.is_default = True
+            obj.save(update_fields=["is_default"])
+            obj.log_action(
+                logs.KIND_DEFAULT,
+                user=request.user,
+                data={
+                    "automatic": False,
+                    "previous": {"id": previous.pk, "name": previous.name}
+                    if previous
+                    else None,
+                },
+            )
         messages.success(request, _("The default list kind has been changed."))
         return redirect(_kinds_url(self.request.organizer))

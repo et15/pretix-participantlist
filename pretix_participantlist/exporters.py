@@ -29,6 +29,7 @@ from reportlab.platypus import (
     TableStyle,
 )
 
+from . import logs
 from .fields import (
     NON_SORTABLE_STATIC_FIELDS,
     QUESTION_TOKEN_PREFIX,
@@ -335,12 +336,36 @@ class AttendeeListPDFExporter(ReportlabExportMixin, BaseExporter):
                 ListConfiguration.objects.filter(organizer=self.event.organizer)
             )
             if len(kinds) > 1:
-                return self._render_archive(form_data, kinds)
+                result = self._render_archive(form_data, kinds)
+                self._log_export(form_data, None, kinds)
+                return result
         organizer = self.event.organizer
         branding = OrganizerBranding.objects.filter(organizer=organizer).first()
         kind = self._resolve_kind(form_data, organizer)
         filename = f"{self._build_filename(branding, kind)}.pdf"
-        return filename, "application/pdf", self.create(form_data)
+        result = filename, "application/pdf", self.create(form_data)
+        self._log_export(form_data, kind, [kind] if kind else [])
+        return result
+
+    def _log_export(self, form_data, kind, kinds):
+        """Log who exported which list kind(s) of this event (no attendee data)."""
+        kind_value = form_data.get("list") or ALL_KINDS_VALUE
+        data = {
+            "list": kind_value,
+            "list_name": kind.name if kind and kind_value != ALL_KINDS_VALUE else None,
+            "kinds": [{"id": k.pk, "name": k.name} for k in kinds],
+        }
+        if kind_value == CUSTOM_KIND_VALUE:
+            data["custom"] = {
+                "columns": kind.default_fields,
+                "sort": kind.sort_fields,
+                "include_pending": kind.include_pending,
+            }
+        self.event.log_action(
+            logs.EXPORT_PDF,
+            data=data,
+            **logs.actor_kwargs(self.permission_holder),
+        )
 
     def _custom_kind(self, form_data, organizer):
         """An unsaved ``ListConfiguration`` built from the custom list texts."""
@@ -355,6 +380,7 @@ class AttendeeListPDFExporter(ReportlabExportMixin, BaseExporter):
         )
 
     def _save_custom_definition(self, form_data):
+        changed = {}
         for setting, key in (
             (CUSTOM_NAME_SETTING, "custom_name"),
             (CUSTOM_COLUMNS_SETTING, "custom_columns"),
@@ -363,6 +389,7 @@ class AttendeeListPDFExporter(ReportlabExportMixin, BaseExporter):
             value = form_data.get(key) or ""
             if (self.event.settings.get(setting) or "") != value:
                 self.event.settings.set(setting, value)
+                changed[setting] = value
         include_pending = bool(form_data.get("custom_include_pending"))
         if (
             self.event.settings.get(
@@ -371,6 +398,13 @@ class AttendeeListPDFExporter(ReportlabExportMixin, BaseExporter):
             != include_pending
         ):
             self.event.settings.set(CUSTOM_INCLUDE_PENDING_SETTING, include_pending)
+            changed[CUSTOM_INCLUDE_PENDING_SETTING] = include_pending
+        if changed:
+            self.event.log_action(
+                logs.CUSTOM_LIST_CHANGED,
+                data=changed,
+                **logs.actor_kwargs(self.permission_holder),
+            )
 
     def _resolve_kind(self, form_data, organizer):
         kind_value = form_data.get("list") or ALL_KINDS_VALUE
@@ -851,6 +885,27 @@ class AttendeeListCSVExporter(ListExporter):
 
     def get_filename(self):
         return "participant_list_all"
+
+    def render(self, form_data, output_file=None):
+        result = super().render(form_data, output_file=output_file)
+        self._log_export(form_data)
+        return result
+
+    def _log_export(self, form_data):
+        """Log who exported which events and fields (no attendee data)."""
+        data = {
+            "events": [e.slug for e in self.events],
+            "fields": list(form_data.get("fields") or self.DEFAULT_CSV_FIELDS),
+            "include_pending": bool(form_data.get("include_pending")),
+            "format": form_data.get("_format"),
+        }
+        # Multi-event exports belong to the organizer log (no single event).
+        target = self.organizer if self.is_multievent else self.event
+        target.log_action(
+            logs.EXPORT_CSV,
+            data=data,
+            **logs.actor_kwargs(self.permission_holder),
+        )
 
     def _csv_header(self, key, question_labels):
         if key.startswith(QUESTION_TOKEN_PREFIX):
